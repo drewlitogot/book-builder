@@ -159,7 +159,9 @@ def extract(archive: Path, dest: Path) -> None:
     top = dest.resolve()
     if archive.suffix != ".zip":
         with tarfile.open(archive) as t:
-            t.extractall(dest, filter="data")
+            # terminfo isn't needed, and its names differ only by case, which macOS and Windows disks can't hold.
+            members = [m for m in t.getmembers() if "/share/terminfo/" not in m.name]
+            t.extractall(dest, members=members, filter="data")
         return
     with zipfile.ZipFile(archive) as z:
         for info in z.infolist():
@@ -375,7 +377,8 @@ def main() -> None:
     version = P.version()
     OUT.mkdir(parents=True, exist_ok=True)
     built = [build(t, version) for t in targets]
-    lines = [f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}" for p in built]
+    done = sorted({*built, *OUT.glob(f"BookBuilder-{version}-*.zip"), *OUT.glob(f"BookBuilder-{version}-*.tar.gz")})
+    lines = [f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}" for p in done]
     (OUT / "SHA256SUMS.txt").write_text("\n".join(lines) + "\n")
     print(f"\nDone. Packages are in {OUT}")
 
