@@ -22,7 +22,7 @@ POST: dict[str, Callable] = {}
 ctx = SimpleNamespace()          # filled by webapp: port(), chapter_summary, build_stem, rel, root, app
 
 # Feature modules served by the web app. Add a module here to plug in its routes.
-FEATURES = ["api_library", "api_git", "api_research", "api_structure", "api_brand", "api_images"]
+FEATURES = ["api_library", "api_git", "api_research", "api_structure", "api_brand", "api_images", "api_trash"]
 
 
 def _register(table: dict, paths: tuple[str, ...]):

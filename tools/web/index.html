@@ -642,6 +642,7 @@ body.expert #invite, body.expert [data-tour-at], body.expert #guide-me, body.exp
         <button id="tour-menu" role="menuitem">Guided tutorial</button>
         <button id="refresh" role="menuitem">Refresh <span class="k">R</span></button>
         <button id="theme" role="menuitem">Light / dark theme</button>
+        <button id="open-browser" role="menuitem" hidden>Open in browser</button>
         <hr>
         <button id="quit" class="danger" role="menuitem">Quit Book Builder</button>
       </div>
@@ -2240,9 +2241,11 @@ $("#theme").onclick = () => {
   const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
   const t = cur === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = t; store.set("theme", t);
 };
+if (/Electron\//.test(navigator.userAgent)) $("#open-browser").hidden = false;   // the desktop app's window
+$("#open-browser").onclick = () => { $("#more").open = false; api("/api/open-browser", {}); };
 $("#quit").onclick = async () => {
-  if (!await ask("<h3 style='margin-top:0'>Stop the book manager?</h3><p>You can start it again from <code>run/Book Manager.command</code>.</p>", [["Cancel", false], ["Stop", true, "primary"]])) return;
-  await api("/api/quit", {}); document.body.innerHTML = "<p style='padding:40px;font-size:18px'>The book manager has stopped. You can close this tab.</p>";
+  if (!await ask("<h3 style='margin-top:0'>Stop Book Builder?</h3><p>You can start it again from the Book Builder app or the manager.</p>", [["Cancel", false], ["Stop", true, "primary"]])) return;
+  await api("/api/quit", {}); document.body.innerHTML = "<p style='padding:40px;font-size:18px'>Book Builder has stopped. You can close this window.</p>";
 };
 $$("#bmode button").forEach(b => b.onclick = () => { store.set("bmode", b.dataset.m); renderBatch(); });
 let bErr = "";

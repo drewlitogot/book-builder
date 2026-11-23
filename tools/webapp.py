@@ -695,6 +695,9 @@ class Handler(BaseHTTPRequestHandler):
             return self.send({"error": "forbidden"}, 403)
         data = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
         p = urlparse(self.path).path
+        if p == "/api/open-browser":         # the desktop app's "Open in browser"
+            webbrowser.open(f"http://127.0.0.1:{PORT}/")
+            return self.send({"ok": True})
         if p == "/api/quit":
             self.send({"ok": True})
             threading.Thread(target=self.server.shutdown, daemon=True).start()

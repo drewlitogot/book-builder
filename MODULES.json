@@ -7,21 +7,61 @@
       "id": "core",
       "name": "Application core",
       "purpose": "Server startup, request handling, route composition, background jobs, platform helpers, shared paths.",
-      "files": ["tools/webapp.py", "tools/routes.py", "tools/jobs.py", "tools/platformio.py", "requirements.txt", "VERSION", ".gitignore", "MODULES.json"],
-      "interfaces": ["routes.get/post decorators, routes.ctx, routes.FEATURES", "jobs.start/report/creep/run_cmd", "platformio.copy/paste/open_path", "webapp.main (CLI: --port, --no-open, --exact-port)"],
+      "files": [
+        "tools/webapp.py",
+        "tools/routes.py",
+        "tools/jobs.py",
+        "tools/platformio.py",
+        "requirements.txt",
+        "VERSION",
+        ".gitignore",
+        "MODULES.json"
+      ],
+      "interfaces": [
+        "routes.get/post decorators, routes.ctx, routes.FEATURES",
+        "jobs.start/report/creep/run_cmd",
+        "platformio.copy/paste/open_path",
+        "webapp.main (CLI: --port, --no-open, --exact-port)"
+      ],
       "depends": [],
-      "tests": ["tests/test_webapp.py", "tests/test_modules.py"],
+      "tests": [
+        "tests/test_webapp.py",
+        "tests/test_modules.py"
+      ],
       "data": "None of its own. Reads the active project folder (BOOK_PROJECT or the install folder).",
       "guidance": "Change only for cross-cutting needs. New features add a module listed in routes.FEATURES instead of editing webapp.py's dispatch."
     },
     {
       "id": "library",
       "name": "Book management",
-      "purpose": "Multi-book Library, project registry, templates and new projects, book metadata (Book Details), app settings, dashboards and health.",
-      "files": ["tools/registry.py", "tools/bookmeta.py", "tools/api_library.py", "tools/insights.py", "tools/structure.py", "tools/api_structure.py", "tools/bookpack.py"],
-      "interfaces": ["registry.library/create/import_folder/ensure/forget/settings/save_settings", "bookmeta.book_meta/save_book_meta", "insights.dashboard/health/research/assets/activity", "HTTP: /api/app, /api/projects/*, /api/settings/save, /api/insights/*, /api/book/save"],
-      "depends": ["core", "content"],
-      "tests": ["tests/test_builder.py", "tests/test_projects.py"],
+      "purpose": "Multi-book Library, project registry, templates and new projects, book metadata (Book Details), app settings, dashboards and health. Delete and restore (the Trash) for books, saved prompts and revision files.",
+      "files": [
+        "tools/registry.py",
+        "tools/bookmeta.py",
+        "tools/api_library.py",
+        "tools/insights.py",
+        "tools/structure.py",
+        "tools/api_structure.py",
+        "tools/bookpack.py",
+        "tools/trash.py",
+        "tools/api_trash.py"
+      ],
+      "interfaces": [
+        "registry.library/create/import_folder/ensure/forget/settings/save_settings",
+        "bookmeta.book_meta/save_book_meta",
+        "insights.dashboard/health/research/assets/activity",
+        "HTTP: /api/app, /api/projects/*, /api/settings/save, /api/insights/*, /api/book/save",
+        "trash.put/items/restore/purge/empty; HTTP: /api/trash*, /api/projects/delete, /api/prompts/files|delete, /api/revisions/files|delete"
+      ],
+      "depends": [
+        "core",
+        "content"
+      ],
+      "tests": [
+        "tests/test_builder.py",
+        "tests/test_projects.py",
+        "tests/test_trash.py"
+      ],
       "data": "Owns book.yml metadata lines (never the chapter list), and app data in BOOK_BUILDER_HOME (registry.json, settings.json).",
       "guidance": "book.yml edits must stay line-based and refuse any change to parts. Never invent records: unknown checks are 'unchecked'."
     },
@@ -29,10 +69,26 @@
       "id": "content",
       "name": "Content and chapters",
       "purpose": "Outline parsing, chapter files and statuses, drafts, revisions, approvals, research import, glossary and front-matter specials, legacy menu.",
-      "files": ["tools/chapter.py", "tools/menu.py", "tools/special.py", "tools/addboxes.py", "tools/boxes/*", "tools/research_library.py", "tools/extract.py", "tools/api_research.py"],
-      "interfaces": ["chapter.parse_outline/chapter_path/front_matter/latest_draft/save/approve/research", "menu.chapters/next_step/problems", "CLI: tools/chapter.py <command>"],
+      "files": [
+        "tools/chapter.py",
+        "tools/menu.py",
+        "tools/special.py",
+        "tools/addboxes.py",
+        "tools/boxes/*",
+        "tools/research_library.py",
+        "tools/extract.py",
+        "tools/api_research.py"
+      ],
+      "interfaces": [
+        "chapter.parse_outline/chapter_path/front_matter/latest_draft/save/approve/research",
+        "menu.chapters/next_step/problems",
+        "CLI: tools/chapter.py <command>"
+      ],
       "depends": [],
-      "tests": ["tests/test_manager.py", "tests/test_research_library.py"],
+      "tests": [
+        "tests/test_manager.py",
+        "tests/test_research_library.py"
+      ],
       "data": "Owns book/, drafts/, reviews/, research/ (per project). Approved prose is never rewritten by tools.",
       "guidance": "Any write to a chapter goes through chapter.py commands; keep approval explicit."
     },
@@ -40,10 +96,23 @@
       "id": "ai-writing",
       "name": "AI writing and handoffs",
       "purpose": "Prompt packs (copy and ZIP), prompt kinds, ChatGPT Project workspace files and instructions.",
-      "files": ["tools/promptpack.py", "tools/packs.py", "tools/workspace.py", "tools/bundle.py"],
-      "interfaces": ["promptpack.kind/make/kinds, Pack.text/to_zip", "workspace.status/instructions/initial_prompt/write_files", "HTTP: /api/prompts/*, /api/workspace/*, /api/step"],
-      "depends": ["content"],
-      "tests": ["tests/test_manager.py"],
+      "files": [
+        "tools/promptpack.py",
+        "tools/packs.py",
+        "tools/workspace.py",
+        "tools/bundle.py"
+      ],
+      "interfaces": [
+        "promptpack.kind/make/kinds, Pack.text/to_zip",
+        "workspace.status/instructions/initial_prompt/write_files",
+        "HTTP: /api/prompts/*, /api/workspace/*, /api/step"
+      ],
+      "depends": [
+        "content"
+      ],
+      "tests": [
+        "tests/test_manager.py"
+      ],
       "data": "Writes prompts/ and dist/prompt-packs, dist/chatgpt-project-files; reads research and agents/.",
       "guidance": "Prompts must be self-contained; never assume files the AI can't see."
     },
@@ -51,10 +120,32 @@
       "id": "design",
       "name": "Book design",
       "purpose": "Book typography and Google Fonts, PDF template colors and fonts, print layout, citation style, Pandoc filters.",
-      "files": ["tools/fonts.py", "tools/brand.py", "tools/api_brand.py", "tools/images.py", "tools/api_images.py", "assets/typst/*", "assets/filters/*", "assets/csl/*", "assets/css/*", "assets/fonts/*", "tools/bib.py"],
-      "interfaces": ["fonts.catalog/install", "insights.typst_brand/set_typst_brand", "Typst variables in assets/typst/callouts.typ"],
-      "depends": ["core"],
-      "tests": ["tests/test_manager.py", "tests/test_brand.py", "tests/test_images.py"],
+      "files": [
+        "tools/fonts.py",
+        "tools/brand.py",
+        "tools/api_brand.py",
+        "tools/images.py",
+        "tools/api_images.py",
+        "assets/typst/*",
+        "assets/filters/*",
+        "assets/csl/*",
+        "assets/css/*",
+        "assets/fonts/*",
+        "tools/bib.py"
+      ],
+      "interfaces": [
+        "fonts.catalog/install",
+        "insights.typst_brand/set_typst_brand",
+        "Typst variables in assets/typst/callouts.typ"
+      ],
+      "depends": [
+        "core"
+      ],
+      "tests": [
+        "tests/test_manager.py",
+        "tests/test_brand.py",
+        "tests/test_images.py"
+      ],
       "data": "Per-project brand lives in the project's assets/; app UI colors are NOT part of this module.",
       "guidance": "Book brands style book outputs only, never the Book Builder interface."
     },
@@ -62,10 +153,33 @@
       "id": "publication",
       "name": "Publication",
       "purpose": "PDF/EPUB/DOCX/HTML builds, the reader website (Astro site), GitHub Pages publishing, Save Work (git).",
-      "files": ["tools/build.py", "tools/website.py", "tools/media.py", "tools/hosting.py", "tools/kindle.py", "tools/gitstatus.py", "tools/api_git.py", "site/*"],
-      "interfaces": ["CLI: tools/build.py build|check, tools/website.py plan|build|publish|status", "gitstatus.status/commit/push/fetch", "HTTP: /api/build, /api/website/*, /api/git*"],
-      "depends": ["content", "design"],
-      "tests": ["tests/test_website.py", "tests/test_gitstatus.py", "tests/test_media.py", "tests/test_hosting.py", "tests/test_kindle.py", "site/tests/*"],
+      "files": [
+        "tools/build.py",
+        "tools/website.py",
+        "tools/media.py",
+        "tools/hosting.py",
+        "tools/kindle.py",
+        "tools/gitstatus.py",
+        "tools/api_git.py",
+        "site/*"
+      ],
+      "interfaces": [
+        "CLI: tools/build.py build|check, tools/website.py plan|build|publish|status",
+        "gitstatus.status/commit/push/fetch",
+        "HTTP: /api/build, /api/website/*, /api/git*"
+      ],
+      "depends": [
+        "content",
+        "design"
+      ],
+      "tests": [
+        "tests/test_website.py",
+        "tests/test_gitstatus.py",
+        "tests/test_media.py",
+        "tests/test_hosting.py",
+        "tests/test_kindle.py",
+        "site/tests/*"
+      ],
       "data": "Writes dist/ and site/dist (generated, ignored); publishes only approved content.",
       "guidance": "Publishing and pushing always need an explicit user action. Save Work commits only the book's folders."
     },
@@ -73,10 +187,22 @@
       "id": "interactive",
       "name": "Interactive (games)",
       "purpose": "Game Package API: import, validation, image sheets, preview, approval, export.",
-      "files": ["tools/games.py", "tools/web/runtime/*", "docs/game-developer/*"],
-      "interfaces": ["games.install/validate/approve/export/split_sheet", "HTTP: /api/games*", "Game API 1.0/1.1 (docs/game-developer)"],
-      "depends": ["content"],
-      "tests": ["tests/test_games.py"],
+      "files": [
+        "tools/games.py",
+        "tools/web/runtime/*",
+        "docs/game-developer/*"
+      ],
+      "interfaces": [
+        "games.install/validate/approve/export/split_sheet",
+        "HTTP: /api/games*",
+        "Game API 1.0/1.1 (docs/game-developer)"
+      ],
+      "depends": [
+        "content"
+      ],
+      "tests": [
+        "tests/test_games.py"
+      ],
       "data": "Owns games/ in each project.",
       "guidance": "Never execute imported game code server-side; keep API 1.0 packages working."
     },
@@ -84,10 +210,30 @@
       "id": "web-ui",
       "name": "Web interface",
       "purpose": "The browser UI: navigation, pages, existing workflows, icons. Colors are locked (docs/upgrade-audit/baseline.md).",
-      "files": ["tools/web/index.html", "tools/web/builder.js", "tools/web/icons.svg", "tools/web/ICONS-LICENSE.txt", "tools/make_icons.py"],
-      "interfaces": ["builder.js APP_NAV/PROJECT_NAV/PAGES (one place for menus and pages)", "index.html view renderers, setView/showView"],
-      "depends": ["core", "library", "content", "ai-writing", "publication", "interactive"],
-      "tests": ["tests/test_builder.py", "tests/test_manager.py", "tests/test_ui_inventory.py"],
+      "files": [
+        "tools/web/index.html",
+        "tools/web/builder.js",
+        "tools/web/icons.svg",
+        "tools/web/ICONS-LICENSE.txt",
+        "tools/make_icons.py"
+      ],
+      "interfaces": [
+        "builder.js APP_NAV/PROJECT_NAV/PAGES (one place for menus and pages)",
+        "index.html view renderers, setView/showView"
+      ],
+      "depends": [
+        "core",
+        "library",
+        "content",
+        "ai-writing",
+        "publication",
+        "interactive"
+      ],
+      "tests": [
+        "tests/test_builder.py",
+        "tests/test_manager.py",
+        "tests/test_ui_inventory.py"
+      ],
       "data": "Browser localStorage for per-viewer conveniences only.",
       "guidance": "Do not change :root color tokens. Add a page by adding a PAGES entry and a nav sub-item."
     },
@@ -95,18 +241,66 @@
       "id": "app-management",
       "name": "Application management",
       "purpose": "Install, launch, source revision, ZIP updates, source and book-data backups, QA and QA review ZIPs, diagnostics, AI development handoffs.",
-      "files": ["tools/manage.py", "tools/bbmanage/*", "BookBuilder_Manager.cmd", "BookBuilder_Manager.command", "run/*"],
-      "interfaces": ["CLI: tools/manage.py <command>", "bbmanage.revision/packages/backups/qa/handoff", "forge-manifest.json (docs/UPDATE_PACKAGE_CONTRACT.md)"],
+      "files": [
+        "tools/manage.py",
+        "tools/bbmanage/*",
+        "BookBuilder_Manager.cmd",
+        "BookBuilder_Manager.command",
+        "run/*"
+      ],
+      "interfaces": [
+        "CLI: tools/manage.py <command>",
+        "bbmanage.revision/packages/backups/qa/handoff",
+        "forge-manifest.json (docs/UPDATE_PACKAGE_CONTRACT.md)"
+      ],
       "depends": [],
-      "tests": ["tests/test_bbmanage.py"],
+      "tests": [
+        "tests/test_bbmanage.py"
+      ],
       "data": "Owns BOOK_BUILDER_HOME/backups, logs, qa, packages, handoffs, manager-state.json.",
       "guidance": "Standard library only. Never weaken stale-revision or hash checks; never let a source operation touch book data."
+    },
+    {
+      "id": "desktop",
+      "name": "Desktop app",
+      "purpose": "The Electron window and the packaged app for macOS, Windows and Linux, with Python, Pandoc and Typst included.",
+      "files": [
+        "desktop/*",
+        "tools/package_app.py",
+        "tools/start_packaged.py",
+        "Build_App_macOS.command",
+        "Build_App_Windows.cmd",
+        "Build_App_Linux.sh"
+      ],
+      "interfaces": [
+        "CLI: tools/package_app.py [--target T]",
+        "start_packaged.py (run by desktop/main.js with BB_RUNTIME_BIN, BB_SAMPLE_BOOK)",
+        "Settings openIn: window | browser"
+      ],
+      "depends": [
+        "core",
+        "library"
+      ],
+      "tests": [
+        "tests/test_desktop.py"
+      ],
+      "data": "Copies the Sample Book to the Books folder on first run; logs to BOOK_BUILDER_HOME/logs/app.log.",
+      "guidance": "The window only shows pages from the local server; other links open in the browser. Never write into the app bundle."
     },
     {
       "id": "docs",
       "name": "Documentation and tests support",
       "purpose": "User and developer documentation, shared test fixtures.",
-      "files": ["README.md", "LICENSE", "START_HERE.md", "CHANGELOG.md", "docs/[A-Z]*.md", "docs/book-manager/*", "docs/architecture/*", "tests/fixtures/*"],
+      "files": [
+        "README.md",
+        "LICENSE",
+        "START_HERE.md",
+        "CHANGELOG.md",
+        "docs/[A-Z]*.md",
+        "docs/book-manager/*",
+        "docs/architecture/*",
+        "tests/fixtures/*"
+      ],
       "interfaces": [],
       "depends": [],
       "tests": [],

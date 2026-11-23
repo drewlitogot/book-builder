@@ -24,15 +24,42 @@ books from the Library; each book lives in its own folder.
   (`docs/game-developer`).
 - **Send to Kindle:** optional, off until you turn it on.
 - **Manager:** install, launch, ZIP updates, backups, QA runs and diagnostics (`tools/manage.py`).
+- **Trash:** deleted books, saved prompts and revision files go to the Trash (Settings › Trash),
+  where you can restore them or delete them for good.
 
-## Requirements
+## Download the desktop app
+
+Ready-to-run builds for macOS (Apple silicon and Intel), Windows and Linux are on the
+[Releases page](https://github.com/drewlitogot/book-builder/releases). They include Python, Pandoc
+and Typst, so nothing else needs to be installed, and they open Book Builder in its own window
+(Electron). To use your browser instead, choose File › Open in Browser, or change
+Settings › Preferences › "Open Book Builder in". Each download has a README with start-up steps.
+The builds aren't signed by Apple or Microsoft yet, so the first start shows a security prompt.
+
+### Build it yourself
+
+Double-click the build script for your system. It needs Python 3.10 or newer with pip and an
+internet connection the first time:
+
+| System | Build script |
+|---|---|
+| macOS | `Build_App_macOS.command` (the first time: right-click › Open) |
+| Windows | `Build_App_Windows.cmd` |
+| Linux | `Build_App_Linux.sh` |
+
+The result is in `dist/packages`. Add `--target all` to build for every system at once, or run
+`python tools/package_app.py --help`.
+
+## Run from source
+
+### Requirements
 
 - Python 3.10 or newer
 - [Pandoc](https://pandoc.org) and [Typst](https://typst.app) to build books
 - Node.js to build the reader website
 - Git, optionally, for Save Work and publishing
 
-## Start
+### Start
 
 | System | Run |
 |---|---|

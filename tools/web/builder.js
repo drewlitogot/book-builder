@@ -19,7 +19,7 @@ const APP_NAV = [
     ["changes", "Recent Changes", "list-checks"], ["approvals", "Approvals", "circle-check"], ["builds", "Build History", "package-check"]] },
   { id: "settings", label: "Settings", icon: "settings-2", subs: [
     ["ai", "AI Providers", "bot"], ["integrations", "Integrations", "github"], ["storage", "Storage", "folder"],
-    ["preferences", "Preferences", "sliders-horizontal"], ["privacy", "Privacy", "shield"]] },
+    ["preferences", "Preferences", "sliders-horizontal"], ["privacy", "Privacy", "shield"], ["trash", "Trash", "trash-2"]] },
 ];
 const PROJECT_NAV = [
   { id: "overview", label: "Overview", icon: "layout-dashboard", key: "1", subs: [
@@ -33,7 +33,8 @@ const PROJECT_NAV = [
     ["gaps", "Evidence Gaps", "file-warning"], ["import", "Import Sources", "upload"]] },
   { id: "ai", label: "AI Studio", icon: "bot", key: "4", sidebar: "chapters", subs: [
     ["prompts", "Prompt Generator", "wand-sparkles", "workspace"], ["batch", "Batch Operations", "layers", "batch"],
-    ["review", "AI Review", "clipboard-check"], ["workflows", "Workflows", "workflow"], ["handoff", "ChatGPT Handoff", "message-square", "workspace"]] },
+    ["review", "AI Review", "clipboard-check"], ["workflows", "Workflows", "workflow"], ["handoff", "ChatGPT Handoff", "message-square", "workspace"],
+    ["saved", "Saved Prompts", "file-text"]] },
   { id: "design", label: "Design", icon: "palette", key: "5", subs: [
     ["brand", "Brand Kit", "swatch-book"], ["fonts", "Fonts", "type"], ["graphics", "Graphics", "image"],
     ["layout", "Interior Layout", "book-open"], ["previews", "Previews", "scan-eye"], ["images", "Image Prompts", "sparkles"]] },
@@ -258,7 +259,8 @@ function bookCard(b, compact = false) {
           <button role="menuitem" data-export="${esc(b.path)}">Export book…</button>
           <button role="menuitem" data-reveal="${esc(b.path)}">Show folder path</button>
           <button role="menuitem" data-archive="${esc(b.path)}" data-v="${b.archived ? "0" : "1"}">${b.archived ? "Unarchive" : "Archive"}</button>
-          ${b.home || b.path === projectPath() ? "" : `<button role="menuitem" class="danger" data-forget="${esc(b.path)}">Remove from Library</button>`}
+          ${b.home || b.path === projectPath() ? "" : `<button role="menuitem" class="danger" data-forget="${esc(b.path)}">Remove from Library</button>
+          <button role="menuitem" class="danger" data-delbook="${esc(b.path)}" data-title="${esc(b.title)}">Delete book…</button>`}
         </div></details></div>`}
     </div></article>`;
 }
@@ -269,6 +271,13 @@ function wireBooks(root) {
   $$("[data-archive]", root).forEach(b => b.onclick = async () => {
     await api("/api/projects/archive", { path: b.dataset.archive, archived: b.dataset.v === "1" });
     await loadApp(); bbRender();
+  });
+  $$("[data-delbook]", root).forEach(b => b.onclick = async () => {
+    if (!await ask(`<h3>Delete “${esc(b.dataset.title)}”?</h3><p>The whole book folder moves to Book Builder's Trash: chapters, drafts, research, images and outputs.</p>
+      <p><code>${esc(b.dataset.delbook)}</code></p><p>You can restore it from Settings › Trash until you empty the Trash.</p>`,
+      [["Cancel", false], ["Delete book", true, "danger"]])) return;
+    const r = await api("/api/projects/delete", { path: b.dataset.delbook, confirm: true });
+    toast(r.message, r.ok ? "good" : "bad"); await loadApp(); bbRender();
   });
   $$("[data-forget]", root).forEach(b => b.onclick = async () => {
     if (await ask(`<h3>Remove from the Library?</h3><p>The folder and its files are not deleted. You can import it again later.</p>`, [["Cancel", false], ["Remove", true, "danger"]])) {
@@ -526,6 +535,8 @@ PAGES["settings/preferences"] = async el => {
     <label for="s-theme">Theme</label>${sel("s-theme", [["system", "Match the system"], ["light", "Light"], ["dark", "Dark"]], s.theme)}
     <label for="s-dens">Density</label>${sel("s-dens", [["comfortable", "Comfortable"], ["compact", "Compact"]], s.density)}
     <label for="s-open">On start</label>${sel("s-open", [["0", "Show the Library"], ["1", "Reopen the last book"]], s.openLastProject ? "1" : "0")}
+    <label for="s-openin">Open Book Builder in</label>${sel("s-openin", [["window", "Its own window"], ["browser", "My web browser"]], s.openIn || "window")}
+    <span class="muted-note">For the desktop app; takes effect the next time it starts. File › Open in Browser works either way.</span>
     <label for="s-guide">Guidance</label>${sel("s-guide", [["1", "Show tutorials and Guide me links"], ["0", "Expert: hide them (Help still has the tutorials)"]], s.guidance === false ? "0" : "1")}
     <label for="s-ft">Default title font</label><input id="s-ft" value="${esc(s.defaultFonts.title)}">
     <label for="s-fb">Default body font</label><input id="s-fb" value="${esc(s.defaultFonts.body)}">
@@ -536,9 +547,30 @@ PAGES["settings/preferences"] = async el => {
       if (theme === "system") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme;
       document.body.classList.toggle("compact", $("#s-dens").value === "compact");
       document.body.classList.toggle("expert", $("#s-guide").value === "0");
-      return { theme, density: $("#s-dens").value, openLastProject: $("#s-open").value === "1", guidance: $("#s-guide").value === "1",
+      return { theme, density: $("#s-dens").value, openLastProject: $("#s-open").value === "1", guidance: $("#s-guide").value === "1", openIn: $("#s-openin").value,
                defaultFonts: { title: $("#s-ft").value, body: $("#s-fb").value } };
     });
+};
+PAGES["settings/trash"] = async el => {
+  const t = await api("/api/trash");
+  const kinds = { book: "Book", prompt: "Prompt", revision: "Revision" };
+  settingsPage(el, "Trash", card(`Deleted items <span class="small muted">${t.items.length}</span>`, t.items.length
+    ? `<table class="tbl"><thead><tr><th>Item</th><th>Kind</th><th>From</th><th>Size</th><th>Deleted</th><th></th></tr></thead><tbody>
+      ${t.items.map(i => `<tr><td>${esc(i.label)}</td><td>${kinds[i.kind] || esc(i.kind)}</td><td><code class="small">${esc(i.original)}</code></td><td>${fmtBytes(i.bytes)}</td><td>${bbWhen(i.deletedAt)}</td>
+        <td class="row"><button class="sm" data-restore="${esc(i.id)}">${ic("undo-2")}Restore</button><button class="sm danger" data-purge="${esc(i.id)}" data-label="${esc(i.label)}">Delete forever</button></td></tr>`).join("")}</tbody></table>
+      <div class="row"><button class="danger" id="trash-empty">${ic("trash-2")}Empty Trash</button></div>`
+    : `<p class="muted-note">The Trash is empty.</p>`) + `<p class="muted-note">Deleted books, prompts and revision files wait here until you delete them for good. Folder: <code>${esc(t.folder)}</code></p>`);
+  const again = () => PAGES["settings/trash"](el);
+  $$("[data-restore]", el).forEach(b => b.onclick = async () => { const r = await api("/api/trash/restore", { id: b.dataset.restore }); toast(r.message, r.ok ? "good" : "bad"); await loadApp(); again(); });
+  $$("[data-purge]", el).forEach(b => b.onclick = async () => {
+    if (!await ask(`<h3>Delete “${esc(b.dataset.label)}” forever?</h3><p>This can't be undone.</p>`, [["Cancel", false], ["Delete forever", true, "danger"]])) return;
+    const r = await api("/api/trash/purge", { id: b.dataset.purge, confirm: true }); toast(r.message, r.ok ? "good" : "bad"); again();
+  });
+  const empty = $("#trash-empty", el);
+  if (empty) empty.onclick = async () => {
+    if (!await ask(`<h3>Empty the Trash?</h3><p>All ${t.items.length} item${t.items.length === 1 ? "" : "s"} will be deleted forever. This can't be undone.</p>`, [["Cancel", false], ["Empty Trash", true, "danger"]])) return;
+    const r = await api("/api/trash/purge", { all: true, confirm: true }); toast(r.message, r.ok ? "good" : "bad"); again();
+  };
 };
 PAGES["settings/privacy"] = async el => {
   await loadApp(); const p = BB.app.settings.privacy;
@@ -777,13 +809,43 @@ PAGES["chapters/reorder"] = async el => {
     if (r.ok) { BB.struct = null; await load(true); renderPage(); }
   };
 };
+// A table of files with checkboxes; a [data-trash-for] button moves the checked ones to the Trash.
+function fileTable(files, id, extraCol) {
+  return `<table class="tbl" id="${id}"><thead><tr><th><input type="checkbox" data-all aria-label="Select all"></th><th>File</th>${extraCol ? `<th>${extraCol}</th>` : ""}<th>Size</th><th>Saved</th></tr></thead><tbody>
+    ${files.map(f => `<tr><td><input type="checkbox" value="${esc(f.path)}" aria-label="Select ${esc(f.name)}"></td><td><code>${esc(f.path)}</code></td>${extraCol ? `<td>${esc(f.kind || "")}</td>` : ""}<td>${fmtBytes(f.bytes)}</td><td>${bbWhen(f.mtime)}</td></tr>`).join("")}</tbody></table>`;
+}
+function wireFileTables(el, endpoint, what, after) {
+  $$("table[id] [data-all]", el).forEach(a => a.onchange = () => $$("tbody input", a.closest("table")).forEach(c => (c.checked = a.checked)));
+  $$("[data-trash-for]", el).forEach(b => b.onclick = async () => {
+    const files = $$(`#${b.dataset.trashFor} tbody input:checked`, el).map(c => c.value);
+    if (!files.length) return toast("Select the files to delete first.", "bad");
+    if (!await ask(`<h3>Delete ${files.length} ${what}${files.length === 1 ? "" : "s"}?</h3><p>They move to Book Builder's Trash. You can restore them from Settings › Trash.</p>`,
+      [["Cancel", false], ["Move to Trash", true, "danger"]])) return;
+    const r = await api(endpoint, { files, confirm: true }); toast(r.message, r.ok ? "good" : "bad"); after();
+  });
+}
 PAGES["chapters/revisions"] = async el => {
-  const r = await data("revisions", true);
+  const [r, f] = await Promise.all([data("revisions", true), api("/api/revisions/files")]);
   el.innerHTML = `<div class="page-h"><h2>Revisions</h2></div>${card("Drafts by chapter, newest first", r.chapters.length ? `<table class="tbl"><thead><tr><th>Chapter</th><th>Drafts</th><th>Latest</th><th></th></tr></thead><tbody>
     ${r.chapters.map(c => `<tr><td><a href="#" data-go="${c.n}">${esc(c.title)}</a></td><td>v1–v${c.versions}</td><td>${bbWhen(c.latest)}</td><td><a href="#" data-go="${c.n}" data-tab="draft">Compare in editor</a></td></tr>`).join("")}</tbody></table>`
-    : `<p class="muted-note">No drafts saved yet.</p>`)}<p class="muted-note">Each saved reply becomes a new draft version; the editor's Draft tab shows them side by side with Claude's checks.</p>`;
+    : `<p class="muted-note">No drafts saved yet.</p>`)}<p class="muted-note">Each saved reply becomes a new draft version; the editor's Draft tab shows them side by side with Claude's checks.</p>
+    ${card("Manage revision files", f.chapters.length ? f.chapters.map(c => `<details class="rev-files"><summary><b>${esc(c.title)}</b> <span class="small muted">${c.files.length} file${c.files.length === 1 ? "" : "s"} · ${esc(c.status)}</span></summary>
+      ${fileTable(c.files, `rev-${c.n}`, "Kind")}
+      <div class="row"><button class="danger sm" data-trash-for="rev-${c.n}">${ic("trash-2")}Move selected to Trash</button></div>
+      ${c.status === "approved" ? "" : `<p class="muted-note">If you delete the newest draft, the editor shows the one before it.</p>`}</details>`).join("")
+      : `<p class="muted-note">No drafts or checks saved yet.</p>`)}
+    <p class="muted-note">Deleting drafts, editor notes or checks never changes a chapter's text in the book. Approved chapters stay as they are.</p>`;
   $$("[data-tab]", el).forEach(a => a.addEventListener("click", () => { tab = "draft"; store.set("tab", "draft"); }, true));
   wireChapterLinks(el);
+  wireFileTables(el, "/api/revisions/delete", "revision file", () => PAGES["chapters/revisions"](el));
+};
+PAGES["ai/saved"] = async el => {
+  const f = await api("/api/prompts/files");
+  el.innerHTML = `<div class="page-h"><h2>Saved prompts</h2></div>${card("Prompts and prompt packs this book has saved", f.files.length
+    ? `${fileTable(f.files, "saved-prompts")}<div class="row"><button class="danger sm" data-trash-for="saved-prompts">${ic("trash-2")}Move selected to Trash</button></div>`
+    : `<p class="muted-note">No saved prompts. Prompts you make in the Prompt Generator are saved in this book's <code>prompts</code> folder.</p>`)}
+    <p class="muted-note">Deleting a saved prompt doesn't change any chapter. You can make it again from the Prompt Generator at any time.</p>`;
+  wireFileTables(el, "/api/prompts/delete", "prompt file", () => PAGES["ai/saved"](el));
 };
 PAGES["chapters/approvals"] = el => {
   const ready = S.chapters.filter(c => c.code === "approve"), done = S.chapters.filter(c => c.code === "advance");

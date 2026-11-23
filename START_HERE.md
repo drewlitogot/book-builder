@@ -2,6 +2,13 @@
 
 Book Builder is the local app that plans, writes (with ChatGPT and Claude), checks, builds and publishes books. It runs only on your computer at http://127.0.0.1:8765 (or the next free port). Each book lives in its own folder; the Library keeps track of them.
 
+## The desktop app
+
+If you downloaded Book Builder from the Releases page, you don't need anything on this page: open the
+app (see the README inside the download). It includes Python, Pandoc and Typst and opens in its own
+window. This page is for running Book Builder from this source folder, and for making those downloads
+with `Build_App_macOS.command`, `Build_App_Windows.cmd` or `Build_App_Linux.sh`.
+
 ## Open the manager
 
 | System | Double-click |

@@ -1,0 +1,9 @@
+{
+  "name": "book-builder",
+  "productName": "Book Builder",
+  "version": "0.0.0",
+  "description": "Plan, write, build and publish books",
+  "main": "main.js",
+  "license": "MIT",
+  "private": true
+}

@@ -41,6 +41,7 @@ SETTINGS_DEFAULTS = {
     "writer": "ChatGPT",                    # the assistant that drafts (gets copied prompts)
     "checker": "Claude Code",               # the assistant that checks drafts
     "openLastProject": False,               # False: start in the Library
+    "openIn": "window",                     # desktop app: "window" (its own window) | "browser"
     "guidance": True,                       # False = expert mode: hide tutorial invitations and Guide me links
     "privacy": {"fetchFontCatalog": True, "checkLiveSite": True},
     "defaultPromptKinds": ["research", "write", "revise"],

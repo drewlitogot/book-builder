@@ -29,8 +29,9 @@ def version() -> str:
 
 # ---- application source: what revisions, source backups and update packages cover
 SOURCE_FILES = [".gitignore", "README.md", "START_HERE.md", "VERSION", "CHANGELOG.md", "requirements.txt",
-                "BookBuilder_Manager.cmd", "BookBuilder_Manager.command", "MODULES.json"]
-SOURCE_DIRS = ["tools", "tests", "run", "assets/typst", "assets/filters", "assets/csl", "assets/css", "assets/fonts",
+                "BookBuilder_Manager.cmd", "BookBuilder_Manager.command", "MODULES.json",
+                "Build_App_macOS.command", "Build_App_Windows.cmd", "Build_App_Linux.sh"]
+SOURCE_DIRS = ["tools", "tests", "run", "desktop", "assets/typst", "assets/filters", "assets/csl", "assets/css", "assets/fonts",
                "docs/book-manager", "docs/game-developer", "docs/architecture"]
 SITE_SOURCE = ["site/package.json", "site/package-lock.json", "site/astro.config.mjs", "site/tsconfig.json",
                "site/vitest.config.ts", "site/runtime.vite.config.ts", "site/public/favicon.svg"]
