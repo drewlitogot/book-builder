@@ -1,0 +1,71 @@
+{
+  "apiVersion": "1.0",
+  "start": "intro",
+  "variables": {
+    "points": { "initial": 0, "description": "Synthetic counter for branching tests." },
+    "path": { "initial": "none" }
+  },
+  "screens": [
+    {
+      "id": "intro", "type": "info", "title": "Welcome to the fixture",
+      "body": "This is **synthetic** text with *emphasis*.\n\n- one list item\n- another, with a [link](https://example.org)",
+      "image": { "asset": "assets/dot.png", "alt": "A small teal square." },
+      "next": "basics"
+    },
+    {
+      "id": "basics", "type": "form", "title": "Every field type",
+      "fields": [
+        { "id": "color", "type": "single-choice", "label": "Pick a color", "required": true,
+          "options": [
+            { "value": "teal", "label": "Teal", "feedback": "Teal noted.", "tone": "positive", "effects": [{ "var": "points", "add": 2 }] },
+            { "value": "violet", "label": "Violet", "feedback": "Violet noted.", "effects": [{ "var": "points", "add": 1 }] }
+          ] },
+        { "id": "shapes", "type": "multiple-choice", "label": "Pick shapes", "minSelected": 1, "maxSelected": 2,
+          "options": [ { "value": "circle", "label": "Circle" }, { "value": "square", "label": "Square" }, { "value": "star", "label": "Star" } ] },
+        { "id": "agree", "type": "checkbox", "label": "Show the follow-up question" },
+        { "id": "followup", "type": "text", "label": "Follow-up (only when the box is ticked)", "maxLength": 80,
+          "showIf": { "field": "agree", "equals": true } },
+        { "id": "size", "type": "dropdown", "label": "Pick a size",
+          "options": [ { "value": "small", "label": "Small" }, { "value": "large", "label": "Large" } ] },
+        { "id": "level", "type": "slider", "label": "How sure are you?", "min": 0, "max": 10, "step": 1, "initial": 5,
+          "minLabel": "Not sure", "maxLabel": "Very sure" },
+        { "id": "notes", "type": "textarea", "label": "Notes (not saved)", "maxLength": 500 },
+        { "id": "card", "type": "cards", "label": "Choose a card",
+          "options": [ { "value": "left", "label": "Left card", "description": "Goes to the left branch." },
+                       { "value": "right", "label": "Right card", "description": "Goes to the right branch." } ] }
+      ],
+      "feedback": [
+        { "when": { "field": "level", "gte": 8 }, "text": "You feel very sure.", "tone": "neutral" }
+      ],
+      "next": { "rules": [ { "when": { "field": "card", "equals": "right" }, "goto": "right" } ], "default": "left" }
+    },
+    {
+      "id": "left", "type": "perspective", "title": "Two views",
+      "perspectives": [
+        { "id": "a", "label": "View A", "body": "What A sees." },
+        { "id": "b", "label": "View B", "body": "What B sees." }
+      ],
+      "requireAllPerspectives": true,
+      "effects": [{ "var": "path", "set": "left" }],
+      "next": "quiz"
+    },
+    {
+      "id": "right", "type": "feedback", "title": "Right branch",
+      "body": "You took the right branch.",
+      "effects": [{ "var": "path", "set": "right" }],
+      "next": "quiz"
+    },
+    {
+      "id": "quiz", "type": "form", "title": "A knowledge question",
+      "fields": [
+        { "id": "fact", "type": "single-choice", "label": "Two plus two is", "scored": true,
+          "options": [ { "value": "four", "label": "Four", "correct": true, "feedback": "Yes: four." },
+                       { "value": "five", "label": "Five", "feedback": "It is four." } ] }
+      ],
+      "next": { "rules": [ { "when": { "all": [ { "var": "points", "gte": 2 }, { "visited": "left" } ] }, "goto": "done-high" } ],
+                "default": "done" }
+    },
+    { "id": "done-high", "type": "completion", "title": "Finished (high)", "body": "High path.", "showSummary": true, "showScore": true },
+    { "id": "done", "type": "completion", "title": "Finished", "body": "Done.", "showSummary": true, "showScore": true }
+  ]
+}

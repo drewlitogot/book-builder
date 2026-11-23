@@ -1,0 +1,24 @@
+{
+  "apiVersion": "1.1",
+  "id": "ch00-replace-me",
+  "title": "REPLACE: short activity title",
+  "description": "REPLACE: one or two sentences saying what the reader does and why it helps.",
+  "version": "1.0.0",
+  "chapter": 1,
+  "activityType": "practice",
+  "subjects": ["replace-me"],
+  "learningObjectives": ["REPLACE: what the reader can do after the activity."],
+  "contentWarnings": [],
+  "sensitive": false,
+  "estimatedMinutes": 3,
+  "language": "en-US",
+  "accessibility": {
+    "summary": "REPLACE: plain description of the activity, e.g. three short multiple-choice questions with feedback.",
+    "keyboard": true,
+    "screenReader": true
+  },
+  "requiredCapabilities": [],
+  "assets": [],
+  "authors": [{ "name": "REPLACE: your name or the AI system's name", "role": "author" }],
+  "license": "CC BY-NC-ND 4.0"
+}

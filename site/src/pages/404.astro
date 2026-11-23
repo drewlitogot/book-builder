@@ -1,0 +1,11 @@
+---
+import Base from "../layouts/Base.astro";
+import { u } from "../lib/data";
+---
+<Base title="Page not found">
+  <div class="prose">
+    <h1>That page isn't here</h1>
+    <p>It may have moved, or the chapter may not be published yet.</p>
+    <div class="actions"><a class="button primary" href={u("read/")}>All chapters</a><a class="button" href={u("search/")}>Search</a></div>
+  </div>
+</Base>

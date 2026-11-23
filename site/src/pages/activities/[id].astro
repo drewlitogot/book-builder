@@ -1,0 +1,29 @@
+---
+import Base from "../../layouts/Base.astro";
+import GameIsland from "../../components/GameIsland";
+import { ACTIVITY_TYPES, book, games, u } from "../../lib/data";
+import type { GameData } from "../../lib/data";
+
+export function getStaticPaths() {
+  return games.map((game) => ({ params: { id: game.manifest.id }, props: { game } }));
+}
+const { game } = Astro.props as { game: GameData };
+const m = game.manifest;
+const chapter = book.entries.find((e) => e.n === m.chapter);
+---
+<Base title={m.title} current="activities" description={m.description}>
+  <div class="prose">
+    <p class="kicker">{ACTIVITY_TYPES[m.activityType]}{chapter ? ` · Chapter ${m.chapter}` : ""}</p>
+    <h1>{m.title}</h1>
+    {chapter && <p>Goes with <a href={u(`read/${chapter.slug}/`)}>Chapter {m.chapter}: {chapter.title}</a>. Reading the chapter first helps.</p>}
+    <details class="card" style="margin:1rem 0">
+      <summary><strong>What you'll practice</strong></summary>
+      <ul>{m.learningObjectives.map((o) => <li>{o}</li>)}</ul>
+      <p class="small muted">Made by {m.authors.map((a) => a.name).join(", ")}{m.license ? ` · ${m.license}` : ""} · version {m.version}</p>
+    </details>
+  </div>
+  <div style="max-width:48rem">
+    <GameIsland client:load manifest={m} activity={game.activity} assetBase={u(`games/${m.id}/`)}
+                backHref={chapter ? u(`read/${chapter.slug}/`) : u("activities/")} backLabel={chapter ? "Back to the chapter" : "All activities"} />
+  </div>
+</Base>

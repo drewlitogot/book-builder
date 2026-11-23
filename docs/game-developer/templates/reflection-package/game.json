@@ -1,0 +1,27 @@
+{
+  "apiVersion": "1.1",
+  "id": "ch07-what-matters-most",
+  "title": "What matters most to you",
+  "description": "Put what you want in order, check one assumption, and leave with a short note you can keep.",
+  "version": "1.0.0",
+  "chapter": 7,
+  "activityType": "reflection",
+  "subjects": ["wants", "priorities"],
+  "learningObjectives": [
+    "Name the things that matter most to you in a relationship.",
+    "Notice which wants are firm and which are flexible."
+  ],
+  "contentWarnings": [],
+  "sensitive": false,
+  "estimatedMinutes": 4,
+  "language": "en-US",
+  "accessibility": {
+    "summary": "A ranking with move-up and move-down buttons, one short question and a summary. Works with a keyboard and a screen reader.",
+    "keyboard": true,
+    "screenReader": true
+  },
+  "requiredCapabilities": ["branching", "reflection-summary", "save-notes"],
+  "assets": [],
+  "authors": [{ "name": "REPLACE: your name or the AI system's name", "role": "author" }],
+  "license": "CC BY-NC-ND 4.0"
+}

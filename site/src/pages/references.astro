@@ -1,0 +1,22 @@
+---
+import Base from "../layouts/Base.astro";
+import { book, references, u } from "../lib/data";
+const titleOf = (slug: string) => book.entries.find((e) => e.slug === slug);
+---
+<Base title="References" description="Every source cited in the published chapters.">
+  <div class="prose">
+    <h1>References</h1>
+    <p>{references.length} sources cited in the published chapters, in APA 7 style.</p>
+    <div id="refs" class="references">
+      {references.map((r) => (
+        <div class="csl-entry">
+          <Fragment set:html={r.html} />
+          <span class="small muted"> Cited in {r.chapters.map((s, i) => {
+            const e = titleOf(s);
+            return <>{i > 0 ? ", " : ""}<a href={u(`read/${s}/#${r.id}`)}>{e?.n ? `ch. ${e.n}` : e?.title}</a></>;
+          })}.</span>
+        </div>
+      ))}
+    </div>
+  </div>
+</Base>

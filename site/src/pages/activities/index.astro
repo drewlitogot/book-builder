@@ -1,0 +1,63 @@
+---
+import Base from "../../layouts/Base.astro";
+import ActivityCard from "../../components/ActivityCard.astro";
+import { ACTIVITY_TYPES, book, games, u } from "../../lib/data";
+const sorted = [...games].sort((a, b) => a.manifest.chapter - b.manifest.chapter || a.manifest.title.localeCompare(b.manifest.title));
+const chapters = [...new Set(sorted.map((g) => g.manifest.chapter))];
+const types = [...new Set(sorted.map((g) => g.manifest.activityType))];
+const subjects = [...new Set(sorted.flatMap((g) => g.manifest.subjects ?? []))].sort();
+const titleOf = (n: number) => book.entries.find((e) => e.n === n)?.title ?? "";
+---
+<Base title="Activities" current="activities" description="Optional interactive activities that go with the chapters of the book.">
+  <div class="prose">
+    <h1>Interactive activities</h1>
+    <p class="lede">Short, optional activities for practicing what a chapter covers. There are no accounts and nothing you type is saved or sent. You can stop or skip at any time.</p>
+  </div>
+  {sorted.length === 0 ? (
+    <div class="empty-state">
+      <div class="views" aria-hidden="true"><span style="background:var(--violet)"></span><span style="background:var(--teal)"></span><span style="background:var(--mustard)"></span></div>
+      <h2>Activities are on the way</h2>
+      <p>None are published yet. When a chapter gets an activity, it will appear here and at the end of that chapter.</p>
+      <a class="button" href={u("read/")}>Read the book</a>
+    </div>
+  ) : (
+    <>
+      <form class="filters" aria-label="Filter activities" onsubmit="return false">
+        <label>Chapter
+          <select data-filter="chapter"><option value="">All chapters</option>
+            {chapters.map((n) => <option value={n}>{n}. {titleOf(n)}</option>)}</select></label>
+        <label>Type
+          <select data-filter="type"><option value="">All types</option>
+            {types.map((t) => <option value={t}>{ACTIVITY_TYPES[t]}</option>)}</select></label>
+        {subjects.length > 0 && <label>Subject
+          <select data-filter="subjects"><option value="">All subjects</option>
+            {subjects.map((s) => <option value={s}>{s.replace(/-/g, " ")}</option>)}</select></label>}
+      </form>
+      <p class="small muted" aria-live="polite" id="count">{sorted.length} {sorted.length === 1 ? "activity" : "activities"}</p>
+      <ul class="game-grid">{sorted.map((g) => <ActivityCard game={g} />)}</ul>
+    </>
+  )}
+</Base>
+<script>
+  import { progress, remembering } from "../../scripts/prefs";
+  const cards = [...document.querySelectorAll<HTMLElement>(".game-card")];
+  const selects = [...document.querySelectorAll<HTMLSelectElement>("[data-filter]")];
+  const run = () => {
+    let shown = 0;
+    for (const c of cards) {
+      const ok = selects.every((s) => !s.value || (s.dataset.filter === "subjects"
+        ? (c.dataset.subjects ?? "").split(" ").includes(s.value) : c.dataset[s.dataset.filter!] === s.value));
+      c.hidden = !ok;
+      if (ok) shown++;
+    }
+    const count = document.getElementById("count");
+    if (count) count.textContent = `${shown} ${shown === 1 ? "activity" : "activities"}`;
+  };
+  selects.forEach((s) => s.addEventListener("change", run));
+  const done = () => {
+    const ids = remembering() ? progress().activities : [];
+    cards.forEach((c) => { const b = c.querySelector<HTMLElement>("[data-done]"); if (b) b.hidden = !ids.includes(c.dataset.game!); });
+  };
+  done();
+  document.addEventListener("bookbuilder:progress", done);
+</script>

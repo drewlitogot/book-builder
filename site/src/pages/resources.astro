@@ -1,0 +1,43 @@
+---
+import Base from "../layouts/Base.astro";
+import { book, u } from "../lib/data";
+const crisis = book.entries.find((e) => e.n === 60);
+const support = book.entries.find((e) => e.n === 59);
+const fmtSize = (b: number) => (b > 1e6 ? `${(b / 1e6).toFixed(1)} MB` : `${Math.round(b / 1e3)} KB`);
+const names: Record<string, string> = { pdf: "PDF (print layout)", epub: "EPUB (e-readers)", docx: "Word document" };
+---
+<Base title="Resources" current="resources" description="Downloads, crisis and support resources, references and the license.">
+  <div class="prose">
+    <h1>Resources</h1>
+
+    <section class="card" aria-labelledby="crisis-h" style="border-left:4px solid var(--mustard)">
+      <h2 id="crisis-h" style="margin-top:0">If you need help now</h2>
+      <p>In the US, if you or someone else is in immediate danger, call <strong>911</strong>. For a mental health or suicidal crisis, call or text <strong>988</strong> (the 988 Suicide &amp; Crisis Lifeline), or chat at <a href="https://988lifeline.org/">988lifeline.org</a>.</p>
+      {crisis?.published && <p>The book's <a href={u(`read/${crisis.slug}/`)}>crisis resources chapter</a> lists more services, including help after sexual assault and abuse.</p>}
+      {support?.published && <p>For ongoing help, see <a href={u(`read/${support.slug}/`)}>{support.title}</a>.</p>}
+    </section>
+
+    <h2>Download the book</h2>
+    {book.downloads.length > 0 ? (
+      <>
+        <p>The downloads contain the same approved chapters as this website. They don't need an internet connection.</p>
+        <ul class="downloads">
+          {book.downloads.map((d) => (
+            <li><a class="button" href={u(d.file)} download>{names[d.format] ?? d.format.toUpperCase()}</a> <span class="small muted">{fmtSize(d.bytes)}</span></li>
+          ))}
+        </ul>
+      </>
+    ) : (
+      <p>Downloadable editions will be available here when they're ready.</p>
+    )}
+
+    <h2>References</h2>
+    <p>Each chapter lists its own sources at the end. All of them are collected on the <a href={u("references/")}>references page</a>.</p>
+
+    <h2>Using and sharing this book</h2>
+    <p>{book.rights} You can share it with credit, for free. Teachers, counselors and support groups are welcome to point people to it.</p>
+
+    <h2>Activities</h2>
+    <p>The <a href={u("activities/")}>interactive activities</a> are optional practice. They work with a keyboard and screen readers, store nothing you type, and can be skipped at any point.</p>
+  </div>
+</Base>

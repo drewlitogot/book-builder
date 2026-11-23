@@ -1,0 +1,5 @@
+# Public website publishing (tools/website.py). Set `repo` to a GitHub repository you own; only the
+# generated site is pushed there, and GitHub Pages serves it at `url`. Publishing always asks first.
+repo: your-account/your-book-site
+branch: main
+url: https://your-account.github.io/your-book-site/

@@ -1,0 +1,72 @@
+---
+import Base from "../layouts/Base.astro";
+import { book, games, parts, splitPart, u } from "../lib/data";
+import Logo from "../components/Logo.astro";
+const first = book.entries.find((e) => e.published);
+const bookParts = parts().filter((p) => p.entries.some((e) => e.kind === "chapter"));
+const published = book.entries.filter((e) => e.published).length;
+const numbered = book.entries.filter((e) => e.published && e.n).length;
+const extra = published - numbered;
+---
+<Base>
+  <section class="hero">
+    <div>
+      <h1 class="hero-title"><Logo alt={book.title.toLowerCase()} /></h1>
+      <p class="hero-sub">{book.subtitle.toLowerCase()}</p>
+      <p class="lede">{book.subtitle || "A free book to read online."}</p>
+      <div class="actions">
+        {first && <a class="button primary" href={u(`read/${first.slug}/`)}>Start reading</a>}
+        <a class="button" href={u("read/")}>All chapters</a>
+        <a class="button" href={u("read/")} data-resume hidden>Continue where you left off</a>
+      </div>
+      <p class="small muted">{numbered} chapters{extra > 0 ? ` + ${extra} additional sections` : ""} · free · no account needed</p>
+    </div>
+    <img class="hero-cover" src={u("brand/cover.jpg")} alt={`The cover of ${book.title}`} width="1024" height="1536" />
+  </section>
+
+  <section class="two-col" aria-label="Who this book is for">
+    <div class="card">
+      <h2 style="margin-top:0">Who it's for</h2>
+      <p>See <a href={u("about/")}>About</a> for who this book is for and how it was made.</p>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0">How it works</h2>
+      <p>Each chapter is written plainly, with sources. Read in order, or start with whatever you need.</p>
+      <p>Consent comes first throughout. Nothing here teaches anyone to pressure, trick or wear someone down.</p>
+      <div class="views" aria-hidden="true"><span style="background:var(--violet)"></span><span style="background:var(--teal)"></span><span style="background:var(--mustard)"></span></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="parts-h">
+    <h2 id="parts-h">The book, in nine parts</h2>
+    <ul class="parts-grid">
+      {bookParts.map((p) => {
+        const sp = splitPart(p.title);
+        const firstIn = p.entries.find((e) => e.published) ?? p.entries[0];
+        return (
+          <li><a href={u(`read/#part-${p.index}`)}>
+            <span class="kicker">{sp.label}</span>
+            <strong style="display:block;font-family:var(--display-font);font-size:1.2rem;margin:0.2rem 0">{sp.name}</strong>
+            <span class="count">Chapters {p.entries[0].n}–{p.entries[p.entries.length - 1].n}</span>
+          </a></li>
+        );
+      })}
+    </ul>
+  </section>
+
+  <section class="card" style="margin-top:2.5rem" aria-labelledby="act-h">
+    <h2 id="act-h" style="margin-top:0">Interactive activities</h2>
+    {games.length > 0 ? (
+      <p>{games.length} optional {games.length === 1 ? "activity lets" : "activities let"} you practice what a chapter covers. Nothing you type is saved or sent.</p>
+    ) : (
+      <p>Optional activities to practice what each chapter covers are on the way. The book is complete without them.</p>
+    )}
+    <a class="button" href={u("activities/")}>Browse activities</a>
+  </section>
+</Base>
+<script>
+  import { progress, remembering } from "../scripts/prefs";
+  const link = document.querySelector<HTMLAnchorElement>("[data-resume]");
+  const last = remembering() ? progress().last : undefined;
+  if (link && last) { link.href = new URL(`${last}/`, link.href).href; link.hidden = false; }
+</script>

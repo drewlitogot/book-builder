@@ -1,0 +1,128 @@
+---
+import "../styles/global.css";
+import "../generated/brand.css";   // the book's brand tokens (empty unless applied in Book Builder)
+import { book, games, u } from "../lib/data";
+import Logo from "../components/Logo.astro";
+
+interface Props { title?: string; description?: string; wide?: boolean; current?: string }
+const { title, description, wide = false, current = "" } = Astro.props;
+const pageTitle = title ? `${title} · ${book.title}` : `${book.title}: ${book.subtitle.toLowerCase()}`;
+const desc = description ?? `${book.title}${book.subtitle ? ": " + book.subtitle : ""}`;
+// Activities appears in the main navigation only once at least one approved activity is published
+// (games.json lists published games only); the /activities/ page itself always exists.
+const nav = [
+  ["read/", "Read", "read"],
+  ...(games.length > 0 ? [["activities/", "Activities", "activities"]] : []),
+  ["search/", "Search", "search"], ["resources/", "Resources", "resources"], ["about/", "About", "about"],
+];
+---
+<!doctype html>
+<html lang="en-US">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{pageTitle}</title>
+  <meta name="description" content={desc} />
+  <meta name="color-scheme" content="light dark" />
+  <meta property="og:title" content={pageTitle} />
+  <meta property="og:description" content={desc} />
+  <meta property="og:image" content={new URL(u("brand/cover.jpg"), Astro.site).href} />
+  <link rel="icon" href={u("favicon.svg")} type="image/svg+xml" />
+  {book.preview && <meta name="robots" content="noindex" />}
+  <script is:inline>
+    // Apply saved display preferences before the first paint (no flash of the wrong theme).
+    try {
+      const p = JSON.parse(localStorage.getItem("bookbuilder:prefs") || "{}");
+      const r = document.documentElement;
+      if (p.theme && p.theme !== "system") r.dataset.theme = p.theme;
+      if (p.size) r.dataset.size = p.size;
+      if (p.font) r.dataset.font = p.font;
+      if (p.spacing) r.dataset.spacing = p.spacing;
+      if (p.motion) r.dataset.motion = p.motion;
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  {book.preview && <div class="preview-banner" role="note">Local preview: includes activities still in review. Not published.</div>}
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="wordmark" href={u()}><Logo alt={`${book.title.toLowerCase()}, home`} /></a>
+      <nav aria-label="Main">
+        <ul class="nav-list">
+          {nav.map(([href, label, key]) => (
+            <li><a href={u(href)} aria-current={current === key ? "page" : undefined}>{label}</a></li>
+          ))}
+        </ul>
+      </nav>
+      <button class="settings-toggle" type="button" aria-expanded="false" aria-controls="settings-panel">
+        <span aria-hidden="true">Aa</span><span class="settings-label">Reading settings</span>
+      </button>
+    </div>
+    <div id="settings-panel" class="settings-panel" hidden>
+      <div class="settings-grid">
+        <fieldset>
+          <legend>Theme</legend>
+          <div class="seg" data-pref="theme">
+            <button type="button" data-value="system">Auto</button>
+            <button type="button" data-value="light">Light</button>
+            <button type="button" data-value="dark">Dark</button>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Text size</legend>
+          <div class="seg" data-pref="size">
+            <button type="button" data-value="s" aria-label="Small">A</button>
+            <button type="button" data-value="m" aria-label="Medium" class="size-m">A</button>
+            <button type="button" data-value="l" aria-label="Large" class="size-l">A</button>
+            <button type="button" data-value="xl" aria-label="Extra large" class="size-xl">A</button>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Reading font</legend>
+          <div class="seg" data-pref="font">
+            <button type="button" data-value="sans">Sans</button>
+            <button type="button" data-value="serif">Serif</button>
+            <button type="button" data-value="legible" title="Atkinson Hyperlegible: letters designed to be hard to confuse">Extra legible</button>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Line spacing</legend>
+          <div class="seg" data-pref="spacing">
+            <button type="button" data-value="normal">Normal</button>
+            <button type="button" data-value="relaxed">Relaxed</button>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Motion</legend>
+          <div class="seg" data-pref="motion">
+            <button type="button" data-value="auto">Auto</button>
+            <button type="button" data-value="reduce">Reduce</button>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Progress</legend>
+          <label class="check"><input type="checkbox" id="remember-progress" /> Remember chapters and activities I finish, on this device only</label>
+          <button type="button" class="text-button" id="clear-data">Clear everything stored on this device</button>
+          <p class="small muted" id="clear-status" aria-live="polite"></p>
+        </fieldset>
+      </div>
+    </div>
+  </header>
+  <main id="main" class={wide ? "wide" : ""} tabindex="-1">
+    <slot />
+  </main>
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <p class="small-mark"><Logo /></p>
+      <p>{book.subtitle.toLowerCase()}</p>
+      <p>By {book.author}{book.editor ? `, created by ${book.editor}` : ""}. Free to read and share under <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" rel="license">CC BY-NC-ND 4.0</a>.</p>
+      <p class="small">Not a substitute for professional help. If you are in danger or crisis in the US, call or text 988, or call 911. <a href={u("resources/")}>More support</a>.</p>
+      <p class="small muted">No accounts, no tracking. Settings stay in your browser.</p>
+    </div>
+  </footer>
+  <script>
+    import "../scripts/prefs";
+  </script>
+</body>
+</html>

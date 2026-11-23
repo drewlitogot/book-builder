@@ -1,0 +1,27 @@
+---
+import Base from "../../layouts/Base.astro";
+import { guides, parts, splitPart, u } from "../../lib/data";
+const list = parts().filter((p) => p.entries.some((e) => guides.some((g) => g.slug === e.slug)));
+---
+<Base title="Quick orientations" current="read" description="Optional quick orientations for each chapter: what it covers, key terms, and where to jump in.">
+  <div class="prose">
+    <h1>Quick orientations</h1>
+    <p class="lede">Every chapter of the book can be read on its own, in any order. These optional pages help you find your way in: what a chapter covers, a few key terms from the glossary, and links straight to its sections.</p>
+    <p>They are not summaries. The full chapter always has the complete explanation, examples and safety information.</p>
+  </div>
+  {list.map((p) => {
+    const sp = splitPart(p.title);
+    return (
+      <section class="part-block" aria-labelledby={`gp-${p.index}`}>
+        {sp.label && <p class="kicker">{sp.label}</p>}
+        <h2 id={`gp-${p.index}`}>{sp.name}</h2>
+        <ol class="chapter-list" role="list">
+          {p.entries.filter((e) => guides.some((g) => g.slug === e.slug)).map((e) => (
+            <li><a href={u(`guides/${e.slug}/`)}><span class="ch-num">{e.n}</span><span class="ch-title">{e.title}</span>
+              <span class="ch-meta"><span class="small muted">Orientation</span></span></a></li>
+          ))}
+        </ol>
+      </section>
+    );
+  })}
+</Base>

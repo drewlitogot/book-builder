@@ -1,0 +1,22 @@
+---
+import Base from "../layouts/Base.astro";
+import { book, u } from "../lib/data";
+---
+<Base title="About" current="about" description="About this book: who it's for, how it was written, and the rules it follows.">
+  <div class="prose" data-pagefind-body>
+    <h1>About this book</h1>
+    <p class="lede"><em>{book.title}</em>{book.subtitle && <>: {book.subtitle}</>}.</p>
+    {book.aboutAuthors ? <p>{book.aboutAuthors}</p> : <p>By <strong>{book.author}</strong>{book.editor && <>, created by {book.editor}</>}.</p>}
+    {book.aiContributors && book.aiContributors.length > 0 && <ul>{book.aiContributors.map(c => <li>{c}</li>)}</ul>}
+    <p>Every factual claim is meant to be backed by a cited source, listed at the end of each chapter and on the <a href={u("references/")}>references page</a>.</p>
+
+    <h2>Not professional advice</h2>
+    <p>This book is general education, not therapy, medical, or legal advice. If you are in danger or in crisis, see <a href={u("resources/")}>support and crisis resources</a>.</p>
+
+    <h2>License</h2>
+    <p>Licensed under <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" rel="license">Creative Commons Attribution-NonCommercial-NoDerivatives 4.0</a>: you may read, copy and share it for free, with credit. You may not sell it or publish changed versions. The fonts (Playfair Display, Source Serif 4, Source Sans 3 and Atkinson Hyperlegible Next) are used under the SIL Open Font License.</p>
+
+    <h2>Privacy</h2>
+    <p>This site has no accounts, ads, analytics or tracking. Reading settings are kept in your browser. Progress is only remembered if you turn it on in Reading settings, and you can clear it there at any time. Answers you type into activities are never stored or sent. The site is hosted on GitHub Pages, which, like any web host, receives standard connection information such as your IP address.</p>
+  </div>
+</Base>

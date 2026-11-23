@@ -1,0 +1,146 @@
+---
+import Base from "../../layouts/Base.astro";
+import GameIsland from "../../components/GameIsland";
+import CalloutFilter from "../../components/CalloutFilter.astro";
+import { book, chapterHtml, chapterRefs, chapterLabel, gameById, guideFor, splitPart, u, ACTIVITY_TYPES } from "../../lib/data";
+import type { Entry } from "../../lib/data";
+
+export function getStaticPaths() {
+  return book.entries.map((entry) => ({ params: { slug: entry.slug }, props: { entry } }));
+}
+const { entry } = Astro.props as { entry: Entry };
+const pub = book.entries.filter((e) => e.published);
+const idx = pub.findIndex((e) => e.slug === entry.slug);
+const prev = idx > 0 ? pub[idx - 1] : undefined;
+const next = idx >= 0 && idx < pub.length - 1 ? pub[idx + 1] : undefined;
+const html = entry.published ? chapterHtml(entry.slug) : "";
+const refs = entry.published && entry.hasRefs ? chapterRefs(entry.slug) : "";
+const chapterGames = entry.games.map(gameById).filter((g) => g !== undefined);
+const part = splitPart(entry.part);
+const callouts = entry.callouts ?? [];
+const siteUrl = new URL(u(), Astro.site).href;
+const guide = entry.published ? guideFor(entry.slug) : undefined;
+---
+<Base title={entry.title} current="read" description={entry.published ? `${chapterLabel(entry)} of ${book.title}: ${entry.title}.` : `${entry.title}: coming soon.`}>
+  {entry.published ? (
+    <>
+      <div class="progress-bar" aria-hidden="true"></div>
+      <div class="reader">
+        <aside class="reader-aside" aria-label="In this chapter">
+          <h2>In this chapter</h2>
+          <ol>{entry.toc?.map((t) => <li><a href={`#${t.id}`}>{t.text}</a></li>)}
+            {chapterGames.length > 0 && <li><a href="#activity">Activity</a></li>}
+            {refs && <li><a href="#references">References</a></li>}</ol>
+          {callouts.length > 0 && <CalloutFilter callouts={callouts} />}
+        </aside>
+        <article aria-labelledby="chapter-title">
+          <header class="chapter-head">
+            <p class="kicker">{part.label ? `${part.label} · ${part.name}` : part.name}</p>
+            <h1 id="chapter-title">{entry.n ? <span class="visually-hidden">Chapter {entry.n}: </span> : null}{entry.title}</h1>
+            <p class="small muted">{chapterLabel(entry)} · about {entry.minutes} minutes{guide && <> · <a href={u(`guides/${entry.slug}/`)}>Quick orientation</a> (optional)</>}</p>
+          </header>
+          {((entry.toc?.length ?? 0) > 2 || callouts.length > 0) && (
+            <details class="toc-mobile">
+              <summary>In this chapter{callouts.length > 0 ? " · show or hide boxes" : ""}</summary>
+              <div class="inner"><ol class="reader-aside">{entry.toc?.map((t) => <li><a href={`#${t.id}`}>{t.text}</a></li>)}
+                {chapterGames.length > 0 && <li><a href="#activity">Activity</a></li>}
+                {refs && <li><a href="#references">References</a></li>}</ol>
+                {callouts.length > 0 && <CalloutFilter callouts={callouts} />}</div>
+            </details>
+          )}
+          <div class="chapter-body" data-pagefind-body data-pagefind-meta={`chapter:${chapterLabel(entry)}`} set:html={html} />
+          {chapterGames.length > 0 && (
+            <section class="activity-section" id="activity" aria-labelledby="activity-h">
+              <p class="kicker">Optional activity</p>
+              <h2 id="activity-h">{chapterGames.length === 1 ? "Try it" : "Try these"}</h2>
+              <p class="small muted">Activities are optional. You can skip them, and nothing you type is saved or sent.</p>
+              {chapterGames.map((g) => (
+                <div style="margin:1.25rem 0">
+                  <GameIsland client:visible manifest={g!.manifest} activity={g!.activity} assetBase={u(`games/${g!.manifest.id}/`)} />
+                  <p class="activity-print">Interactive activity: {g!.manifest.title} ({ACTIVITY_TYPES[g!.manifest.activityType]}). Online at {siteUrl}activities/{g!.manifest.id}/</p>
+                </div>
+              ))}
+            </section>
+          )}
+          {refs && (
+            <section class="chapter-body chapter-refs" aria-labelledby="references" data-pagefind-ignore>
+              <h2 id="references">References</h2>
+              <Fragment set:html={refs} />
+            </section>
+          )}
+          <nav class="chapter-nav" aria-label="Chapters">
+            {prev && <a class="prev" href={u(`read/${prev.slug}/`)} rel="prev"><small>Previous</small>{prev.title}</a>}
+            {next && <a class="next" href={u(`read/${next.slug}/`)} rel="next"><small>Next</small>{next.title}</a>}
+          </nav>
+        </article>
+      </div>
+    </>
+  ) : (
+    <div class="coming-soon">
+      <p class="kicker">{chapterLabel(entry)} · {part.name}</p>
+      <h1>{entry.title}</h1>
+      <div class="card">
+        <p><strong>Coming soon.</strong> This section is still being written and reviewed. It will appear here once it's approved.</p>
+        <p><a href={u("read/")}>Back to all chapters</a></p>
+      </div>
+    </div>
+  )}
+</Base>
+<script>
+  import { recordProgress } from "../../scripts/prefs";
+  if (document.querySelector(".chapter-body")) {
+  const slug = location.pathname.split("/").filter(Boolean).pop()!;
+  recordProgress((p) => { p.last = slug; });
+
+  // Reading progress bar, and "read" once the reader reaches the end.
+  const bar = document.querySelector<HTMLElement>(".progress-bar");
+  const body = document.querySelector<HTMLElement>(".chapter-body");
+  let marked = false;
+  const onScroll = () => {
+    if (!body || !bar) return;
+    const r = body.getBoundingClientRect();
+    const total = r.height - window.innerHeight * 0.6;
+    const f = Math.min(1, Math.max(0, -r.top / Math.max(1, total)));
+    bar.style.width = `${f * 100}%`;
+    if (f > 0.95 && !marked) { marked = true; recordProgress((p) => { if (!p.read.includes(slug)) p.read.push(slug); }); }
+  };
+  addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  // Highlight the current section in the side list.
+  const links = [...document.querySelectorAll<HTMLAnchorElement>(".reader-aside:not(.toc-mobile *) a[href^='#']")];
+  const obs = new IntersectionObserver((entries) => {
+    for (const en of entries) if (en.isIntersecting) {
+      links.forEach((a) => a.setAttribute("aria-current", String(a.getAttribute("href") === `#${en.target.id}`)));
+    }
+  }, { rootMargin: "0px 0px -70% 0px" });
+  links.forEach((a) => { const t = document.getElementById(a.getAttribute("href")!.slice(1)); if (t) obs.observe(t); });
+
+  // Callout filtering. Choices are remembered in this browser only.
+  const KEY = "bookbuilder:callouts";
+  let hidden: string[] = [];
+  try { hidden = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { /* ignore */ }
+  const applyFilter = () => {
+    document.querySelectorAll<HTMLElement>(".chapter-body .callout").forEach((c) => {
+      const tag = [...c.classList].find((x) => /^(perspective|neurotype|partner)-/.test(x));
+      const key = tag ? tag.replace("-", ":") : "";
+      c.classList.toggle("is-hidden", hidden.includes(key));
+    });
+  };
+  // The same checkboxes appear in the sidebar (desktop) and the "In this chapter" panel (phones);
+  // every copy of a box reflects the same setting.
+  const boxes = [...document.querySelectorAll<HTMLInputElement>("[data-callout]")];
+  const syncBoxes = () => boxes.forEach((b) => { b.checked = !hidden.includes(b.dataset.callout!); });
+  boxes.forEach((box) => {
+    box.addEventListener("change", () => {
+      const key = box.dataset.callout!;
+      hidden = box.checked ? hidden.filter((h) => h !== key) : [...hidden.filter((h) => h !== key), key];
+      try { localStorage.setItem(KEY, JSON.stringify(hidden)); } catch { /* ignore */ }
+      syncBoxes();
+      applyFilter();
+    });
+  });
+  syncBoxes();
+  applyFilter();
+  }
+</script>

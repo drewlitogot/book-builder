@@ -1,0 +1,57 @@
+---
+import Base from "../../layouts/Base.astro";
+import { book, guides, parts, splitPart, u } from "../../lib/data";
+const list = parts();
+const published = book.entries.filter((e) => e.published).length;
+---
+<Base title="Read" current="read" description="All chapters, by part.">
+  <div class="prose">
+    <h1>Read the book</h1>
+    <p class="lede">{published} of {book.entries.length} sections are available. Read in order, or start with whatever you need right now.</p>
+    {guides.length > 0 && <p class="small">New to a topic, or jumping in mid-book? Each chapter has an optional <a href={u("guides/")}>quick orientation</a> with key terms and links straight to its sections.</p>}
+  </div>
+  {list.map((p) => {
+    const sp = splitPart(p.title);
+    return (
+      <section class="part-block" id={`part-${p.index}`} aria-labelledby={`part-h-${p.index}`}>
+        {sp.label && <p class="kicker">{sp.label}</p>}
+        <h2 id={`part-h-${p.index}`}>{sp.name}</h2>
+        <ol class="chapter-list" role="list">
+          {p.entries.map((e) => (
+            <li data-slug={e.slug}>
+              {e.published ? (
+                <a href={u(`read/${e.slug}/`)}>
+                  <span class="ch-num">{e.n ?? "·"}</span>
+                  <span class="ch-title">{e.title}</span>
+                  <span class="ch-meta">
+                    <span class="badge done" hidden data-read>Read</span>
+                    {e.games.length > 0 && <span class="badge game">Activity</span>}
+                    <span class="small muted">{e.minutes} min</span>
+                  </span>
+                </a>
+              ) : (
+                <span class="soon-row">
+                  <span class="ch-num">{e.n ?? "·"}</span>
+                  <span class="ch-title">{e.title}</span>
+                  <span class="ch-meta"><span class="badge soon">Coming soon</span></span>
+                </span>
+              )}
+            </li>
+          ))}
+        </ol>
+      </section>
+    );
+  })}
+</Base>
+<script>
+  import { progress, remembering } from "../../scripts/prefs";
+  const mark = () => {
+    const read = remembering() ? progress().read : [];
+    document.querySelectorAll<HTMLElement>("[data-slug]").forEach((li) => {
+      const b = li.querySelector<HTMLElement>("[data-read]");
+      if (b) b.hidden = !read.includes(li.dataset.slug!);
+    });
+  };
+  mark();
+  document.addEventListener("bookbuilder:progress", mark);
+</script>

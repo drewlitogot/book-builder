@@ -1,0 +1,24 @@
+{
+  "apiVersion": "1.1",
+  "id": "ch00-branching-template",
+  "title": "REPLACE: scenario title",
+  "description": "REPLACE: a short scenario where the reader chooses what to say, sees how each choice might land, and compares two people's views.",
+  "version": "1.0.0",
+  "chapter": 1,
+  "activityType": "scenario",
+  "subjects": ["replace-me"],
+  "learningObjectives": ["REPLACE: objective one.", "REPLACE: objective two."],
+  "contentWarnings": [],
+  "sensitive": false,
+  "estimatedMinutes": 5,
+  "language": "en-US",
+  "accessibility": {
+    "summary": "REPLACE: a short scenario with choices, two perspective tabs and an optional written reflection that is never saved.",
+    "keyboard": true,
+    "screenReader": true
+  },
+  "requiredCapabilities": ["branching", "variables", "perspective-switching", "reflection-summary"],
+  "assets": [],
+  "authors": [{ "name": "REPLACE", "role": "author" }],
+  "license": "CC BY-NC-ND 4.0"
+}

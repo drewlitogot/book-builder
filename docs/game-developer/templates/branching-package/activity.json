@@ -1,0 +1,60 @@
+{
+  "apiVersion": "1.1",
+  "start": "setup",
+  "variables": {
+    "checkedIn": { "initial": 0, "description": "How many times the reader chose to ask rather than guess." }
+  },
+  "screens": [
+    {
+      "id": "setup", "type": "info", "title": "REPLACE: the situation",
+      "body": "REPLACE: two or three sentences describing the situation and the people in it.",
+      "next": "choose"
+    },
+    {
+      "id": "choose", "type": "form", "title": "REPLACE: what would you do?",
+      "fields": [
+        {
+          "id": "response", "type": "cards", "label": "REPLACE: pick the response closest to yours",
+          "options": [
+            { "value": "ask", "label": "REPLACE: ask directly", "description": "REPLACE",
+              "feedback": "REPLACE: why asking can help, and what might still happen.", "tone": "positive",
+              "effects": [{ "var": "checkedIn", "add": 1 }] },
+            { "value": "guess", "label": "REPLACE: guess and act", "description": "REPLACE",
+              "feedback": "REPLACE: what the guess might miss, without shaming.", "tone": "consider" },
+            { "value": "wait", "label": "REPLACE: wait and see", "description": "REPLACE",
+              "feedback": "REPLACE: when waiting helps and when it doesn't.", "tone": "neutral" }
+          ]
+        }
+      ],
+      "next": { "rules": [ { "when": { "field": "response", "equals": "guess" }, "goto": "guess-outcome" } ], "default": "views" }
+    },
+    {
+      "id": "guess-outcome", "type": "feedback", "title": "REPLACE: how the guess landed",
+      "body": "REPLACE: one plausible outcome, described from both sides.",
+      "next": "views"
+    },
+    {
+      "id": "views", "type": "perspective", "title": "REPLACE: two views of the same moment",
+      "perspectives": [
+        { "id": "first", "label": "REPLACE: person one", "body": "REPLACE: what they noticed and felt." },
+        { "id": "second", "label": "REPLACE: person two", "body": "REPLACE: what they noticed and felt." }
+      ],
+      "requireAllPerspectives": true,
+      "next": "reflect"
+    },
+    {
+      "id": "reflect", "type": "form", "title": "REPLACE: your turn (optional)",
+      "fields": [
+        { "id": "comfort", "type": "slider", "label": "REPLACE: how comfortable would asking feel?", "min": 1, "max": 5, "step": 1, "initial": 3, "minLabel": "Not at all", "maxLabel": "Very" },
+        { "id": "words", "type": "textarea", "label": "REPLACE: words you might use (optional, never saved)", "maxLength": 400,
+          "showIf": { "field": "comfort", "gte": 3 } }
+      ],
+      "next": "done"
+    },
+    {
+      "id": "done", "type": "completion", "title": "REPLACE: closing",
+      "body": "REPLACE: connect back to the chapter's main idea.",
+      "showSummary": true
+    }
+  ]
+}

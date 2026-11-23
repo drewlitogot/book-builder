@@ -1,0 +1,18 @@
+---
+import { ACTIVITY_TYPES, book, u } from "../lib/data";
+import type { GameData } from "../lib/data";
+interface Props { game: GameData }
+const { manifest: m } = Astro.props.game;
+const chapter = book.entries.find((e) => e.n === m.chapter);
+// API 1.1 games have a square icon (decorative here: the title says what the activity is).
+const icon = m.icon ? u(`games/${m.id}/${m.icon.split("/").map(encodeURIComponent).join("/")}`) : null;
+---
+<li class="card game-card" data-chapter={m.chapter} data-type={m.activityType} data-subjects={(m.subjects ?? []).join(" ")} data-game={m.id}>
+  {icon && <img class="game-icon" src={icon} alt="" width="56" height="56" loading="lazy" />}
+  <p class="kicker">{ACTIVITY_TYPES[m.activityType]}{m.estimatedMinutes ? ` · ${m.estimatedMinutes} min` : ""}</p>
+  <h3><a href={u(`activities/${m.id}/`)}>{m.title}</a></h3>
+  <p>{m.description}</p>
+  {chapter && <p class="small muted">From <a href={u(`read/${chapter.slug}/#activity`)}>Chapter {m.chapter}: {chapter.title}</a></p>}
+  {m.contentWarnings.length > 0 && <p class="small"><strong>Content note:</strong> {m.contentWarnings.join("; ")}</p>}
+  <span class="badge done" hidden data-done>Finished on this device</span>
+</li>

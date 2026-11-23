@@ -1,0 +1,78 @@
+{
+  "apiVersion": "1.1",
+  "start": "intro",
+  "screens": [
+    {
+      "id": "intro",
+      "type": "info",
+      "title": "There are no right answers here",
+      "body": "You'll put a few things in order, answer one question, and get a short summary at the end. Nothing you choose is saved or sent anywhere.",
+      "continueLabel": "Start",
+      "next": "rank"
+    },
+    {
+      "id": "rank",
+      "type": "form",
+      "title": "Put these in order",
+      "body": "Think about a relationship you'd want to be in a year from now.",
+      "fields": [
+        {
+          "id": "priorities",
+          "type": "ranking",
+          "label": "Most important first",
+          "shuffle": true,
+          "hint": "If two feel equal, pick the one you'd miss more if it were gone.",
+          "options": [
+            { "value": "calm", "label": "Feeling calm and safe together" },
+            { "value": "fun", "label": "Having fun and doing things together" },
+            { "value": "talk", "label": "Talking openly, including about hard things" },
+            { "value": "space", "label": "Having time and space of your own" },
+            { "value": "future", "label": "Wanting the same future" }
+          ]
+        }
+      ],
+      "next": "firm"
+    },
+    {
+      "id": "firm",
+      "type": "form",
+      "title": "Your top choice: {{answer:priorities}}",
+      "fields": [
+        {
+          "id": "firmness",
+          "type": "single-choice",
+          "label": "How firm is your first choice?",
+          "shuffle": false,
+          "options": [
+            { "value": "firm", "label": "Firm: I wouldn't stay without it" },
+            { "value": "strong", "label": "Strong, but I could talk about it" },
+            { "value": "unsure", "label": "I'm not sure yet" }
+          ]
+        },
+        {
+          "id": "why",
+          "type": "textarea",
+          "label": "Why does it matter to you? (optional)",
+          "maxLength": 600
+        }
+      ],
+      "feedback": [
+        { "when": { "field": "priorities", "first": "space" }, "text": "Wanting time to yourself is a real need, not a lack of interest. Saying it early saves both people guessing.", "tone": "positive" },
+        { "when": { "field": "firmness", "equals": "unsure" }, "text": "Not knowing yet is normal. Trying things is partly how people find out.", "tone": "neutral" }
+      ],
+      "next": "done"
+    },
+    {
+      "id": "done",
+      "type": "completion",
+      "title": "Your order",
+      "body": "You put things in this order: {{answer:priorities}}.",
+      "showSummary": true,
+      "takeaways": [
+        "Your order can change as you learn more about yourself.",
+        "A firm want is worth saying out loud early; a flexible one is worth talking through."
+      ],
+      "allowSaveNotes": true
+    }
+  ]
+}

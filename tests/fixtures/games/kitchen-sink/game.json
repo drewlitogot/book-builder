@@ -1,0 +1,26 @@
+{
+  "apiVersion": "1.0",
+  "id": "fixture-kitchen-sink",
+  "title": "Test fixture: every component",
+  "description": "Synthetic test fixture that exercises every component, branching rule and lifecycle event. Not a real chapter activity.",
+  "version": "1.0.0",
+  "chapter": 1,
+  "activityType": "knowledge-check",
+  "subjects": ["testing"],
+  "learningObjectives": ["Exercise every runtime component in automated tests."],
+  "contentWarnings": [],
+  "sensitive": false,
+  "estimatedMinutes": 3,
+  "language": "en-US",
+  "accessibility": {
+    "summary": "A short synthetic form with choices, a slider and optional text boxes.",
+    "keyboard": true,
+    "screenReader": true
+  },
+  "requiredCapabilities": ["images", "branching", "variables", "perspective-switching", "reflection-summary", "scoring"],
+  "assets": [
+    { "path": "assets/dot.png", "type": "image", "alt": "A small teal square used as a test image." }
+  ],
+  "authors": [{ "name": "Book Builder test suite", "role": "fixture" }],
+  "license": "CC BY-NC-ND 4.0"
+}

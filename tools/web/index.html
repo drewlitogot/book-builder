@@ -1,0 +1,2297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book Builder</title>
+<style>
+:root {
+  --bg: #f3f4f6; --panel: #ffffff; --panel2: #f8f9fa; --ink: #1f2328; --muted: #5f6672; --line: #dfe2e6;
+  --accent: #2f6db3; --accent-ink: #fff; --good: #1f7a45; --warn: #9a6200; --bad: #b42318; --claude: #6b4fa0;
+  --soft-good: #e6f4ec; --soft-warn: #fdf3dc; --soft-bad: #fbe9e7; --soft-claude: #efeaf7; --soft-accent: #e8f0fa;
+  --radius: 6px; --shadow: none;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #18191b; --panel: #202124; --panel2: #1c1d1f; --ink: #e8eaed; --muted: #a0a6ae; --line: #33363a;
+    --accent: #7aaee6; --accent-ink: #0d1520; --good: #6cc391; --warn: #e3a64a; --bad: #ef7d74; --claude: #b892e6;
+    --soft-good: #1b3125; --soft-warn: #362a14; --soft-bad: #3a1f1c; --soft-claude: #2a2236; --soft-accent: #1b2735;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #18191b; --panel: #202124; --panel2: #1c1d1f; --ink: #e8eaed; --muted: #a0a6ae; --line: #33363a;
+  --accent: #7aaee6; --accent-ink: #0d1520; --good: #6cc391; --warn: #e3a64a; --bad: #ef7d74; --claude: #b892e6;
+  --soft-good: #1b3125; --soft-warn: #362a14; --soft-bad: #3a1f1c; --soft-claude: #2a2236; --soft-accent: #1b2735;
+}
+@font-face { font-family: "Playfair Display"; src: url("/fonts/PlayfairDisplay.ttf") format("truetype"); font-weight: 400 900; font-display: swap; }
+@font-face { font-family: "Source Sans 3"; src: url("/fonts/SourceSans3.ttf") format("truetype"); font-weight: 200 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Source Sans 3"; src: url("/fonts/SourceSans3-Italic.ttf") format("truetype"); font-weight: 200 900; font-style: italic; font-display: swap; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--ink); font: 15.5px/1.5 "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+h2, h3, .ch-title, dialog h3 { font-family: "Source Sans 3", system-ui, sans-serif; font-weight: 650; letter-spacing: 0; }
+/* Book Builder uses its own UI font; a book's fonts never style the app. */
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 6px 12px; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+button.big { font-size: 17px; padding: 12px 18px; border-radius: 10px; }
+button.danger { color: var(--bad); }
+button.ghost { background: transparent; border-color: transparent; }
+button.ghost:hover { border-color: var(--line); }
+input:not([type]), input[type=text], input[type=search], input[type=number], select, textarea { color: inherit; font: inherit; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+textarea { width: 100%; font-family: var(--mono); font-size: 13px; resize: vertical; }
+kbd { font-family: var(--mono); font-size: 12px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--panel2); }
+a { color: var(--accent); }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.grow { flex: 1; }
+.hidden { display: none !important; }
+
+/* layout */
+.app { display: grid; grid-template-columns: 310px 1fr; grid-template-rows: auto 1fr; height: 100vh; }
+header.top { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+header.top h1 { font-size: 16px; margin: 0; white-space: nowrap; }
+nav.views { display: flex; gap: 2px; }
+nav.views button { border: none; background: transparent; padding: 6px 12px; border-radius: 7px; color: var(--muted); }
+nav.views button.on { background: var(--soft-accent); color: var(--accent); font-weight: 600; }
+.progress { flex: 1; min-width: 120px; max-width: 360px; }
+.bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; display: flex; }
+.bar span { display: block; height: 100%; }
+aside { border-right: 1px solid var(--line); background: var(--panel2); display: flex; flex-direction: column; min-height: 0; }
+aside .filters { padding: 10px; display: grid; gap: 6px; border-bottom: 1px solid var(--line); }
+aside .list { overflow-y: auto; flex: 1; padding: 4px 0 20px; }
+.part-h { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 12px 14px 4px; font-weight: 600; }
+.ch-item { display: flex; gap: 8px; align-items: center; padding: 5px 14px; cursor: pointer; border-left: 3px solid transparent; }
+.ch-item:hover { background: var(--panel); }
+.ch-item.on { background: var(--panel); border-left-color: var(--accent); }
+.ch-item .num { font-family: var(--mono); font-size: 12px; color: var(--muted); width: 20px; }
+.ch-item .t { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
+main { overflow-y: auto; padding: 20px 28px 60px; min-width: 0; }
+.wrap { max-width: 1000px; margin: 0 auto; }
+
+/* pills */
+.pill { font-size: 11px; border-radius: 20px; padding: 1px 8px; white-space: nowrap; font-weight: 600; }
+.p-research { background: var(--line); color: var(--muted); }
+.p-saveresearch { background: var(--soft-accent); color: var(--muted); }
+.p-write { background: var(--soft-accent); color: var(--accent); opacity: .8; }
+.p-save { background: var(--soft-accent); color: var(--accent); }
+.p-fix { background: var(--soft-bad); color: var(--bad); }
+.p-claude { background: var(--soft-claude); color: var(--claude); }
+.p-revise { background: var(--soft-warn); color: var(--warn); }
+.p-approve { background: var(--soft-good); color: var(--good); }
+.p-advance { background: var(--good); color: var(--panel); }
+
+/* cards */
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 14px; box-shadow: var(--shadow); }
+.card h3 { margin: 0 0 10px; font-size: 15px; }
+.ch-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.ch-head h2 { margin: 0; font-size: 24px; line-height: 1.2; }
+.ch-head .sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+.stepper { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-bottom: 14px; }
+.stepper div { text-align: center; font-size: 12px; padding: 8px 4px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); color: var(--muted); }
+.stepper div.done { background: var(--soft-good); color: var(--good); border-color: transparent; }
+.stepper div.now { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+.stepper b { display: block; font-size: 15px; }
+
+.next { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; border: 2px solid var(--accent); }
+.next .why { flex: 1; min-width: 220px; }
+.help { background: var(--soft-accent); border-radius: 8px; padding: 10px 14px 10px 32px; margin: 12px 0 0; }
+.help li { margin: 2px 0; }
+.issues { border-color: var(--bad); background: var(--soft-bad); }
+.issues ul, .minor ul { margin: 6px 0 0; padding-left: 20px; }
+.minor { background: var(--soft-warn); border-color: transparent; }
+
+.bm-brand { display: flex; align-items: center; gap: 8px; }
+.bm-logo { height: 22px; width: auto; display: block; }
+.bm-logo-dark { display: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .bm-logo-light { display: none; } :root:not([data-theme="light"]) .bm-logo-dark { display: block; } }
+:root[data-theme="dark"] .bm-logo-light { display: none; } :root[data-theme="dark"] .bm-logo-dark { display: block; }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 12px; flex-wrap: wrap; }
+.tabs button { border: none; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 8px 12px; color: var(--muted); }
+.tabs button.on { border-bottom-color: var(--accent); color: var(--ink); font-weight: 600; }
+.tabs .count { font-size: 11px; color: var(--muted); }
+
+.doc { max-height: 70vh; overflow-y: auto; padding: 4px 10px; font-family: Georgia, "Iowan Old Style", serif; font-size: 16px; line-height: 1.6; }
+.doc h1 { font-size: 26px; } .doc h2 { font-size: 20px; } .doc h3 { font-size: 17px; }
+.doc .callout { border-left: 4px solid var(--accent); background: var(--panel2); padding: 4px 14px; margin: 14px 0; border-radius: 0 8px 8px 0; font-family: -apple-system, system-ui, sans-serif; font-size: 15px; }
+.doc .neurotype { border-left-color: var(--claude); } .doc .partner { border-left-color: #8a5a2b; }
+.doc table { border-collapse: collapse; } .doc td, .doc th { border: 1px solid var(--line); padding: 4px 8px; }
+pre.raw { max-height: 70vh; overflow: auto; white-space: pre-wrap; font-family: var(--mono); font-size: 12.5px; background: var(--panel2); padding: 12px; border-radius: 8px; margin: 0; }
+mark.cite { background: var(--soft-claude); color: inherit; border-radius: 3px; padding: 0 2px; }
+mark.need { background: var(--soft-bad); color: var(--bad); border-radius: 3px; padding: 0 2px; font-weight: 600; }
+
+.preview { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 12px 0; }
+.stat { background: var(--panel2); border-radius: 8px; padding: 8px 12px; }
+.stat b { display: block; font-size: 20px; }
+.stat.bad b { color: var(--bad); } .stat.good b { color: var(--good); }
+
+.grid60 { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.tile { border-radius: 8px; padding: 8px 10px; cursor: pointer; border: 1px solid var(--line); background: var(--panel); font-size: 13px; }
+.tile:hover { border-color: var(--accent); }
+.tile .n { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.tile .tt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.counts .stat { cursor: pointer; }
+
+table.batch { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.batch td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+table.batch tr.ptr td { background: var(--soft-accent); }
+table.batch tr.ptr td:first-child { box-shadow: inset 3px 0 var(--accent); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: none; border-radius: 0; }
+.seg button.on { background: var(--accent); color: var(--accent-ink); }
+
+.files li { display: flex; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px dashed var(--line); }
+.files li code { flex: 1; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; }
+ul.files { list-style: none; padding: 0; margin: 0; }
+
+#membar { display: none; background: var(--soft-warn); color: var(--warn); border: 1px solid var(--warn); border-radius: 8px; padding: 3px 10px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+#membar.on { display: inline-block; }
+body.dragging main { outline: 3px dashed var(--accent); outline-offset: -10px; }
+.zipbox { border: 1px dashed var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; background: var(--panel2); }
+#toasts { position: fixed; right: 16px; bottom: 16px; display: grid; gap: 8px; z-index: 50; max-width: 420px; }
+.toast { background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.2); font-size: 14px; }
+.toast.bad { background: var(--bad); color: #fff; } .toast.good { background: var(--good); color: #fff; }
+#busy { position: fixed; inset: 0; background: rgba(0,0,0,.15); display: flex; align-items: center; justify-content: center; z-index: 40; }
+#busy > div { background: var(--panel); padding: 16px 22px; border-radius: 12px; box-shadow: var(--shadow); }
+#busy .job { width: min(520px, 90vw); display: grid; gap: 8px; }
+#busytext { font-weight: 600; }
+.jbar { height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
+.jbar > span { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 5px; transition: width .35s ease; }
+.jbar.indet > span { width: 35%; animation: indet 1.3s ease-in-out infinite; }
+@keyframes indet { from { margin-left: -35%; } to { margin-left: 100%; } }
+.jmeta { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--muted); }
+.jlog { font: 12px/1.45 var(--mono); color: var(--muted); max-height: 7.4em; overflow: hidden; white-space: pre-wrap; word-break: break-word; }
+.jlog:empty { display: none; }
+@media (prefers-reduced-motion: reduce) { .jbar > span { transition: none; } .jbar.indet > span { animation: none; width: 100%; opacity: .45; } }
+svg.ic, .searchbox > svg { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+button:has(> svg.ic), a:has(> svg.ic) { display: inline-flex; align-items: center; gap: 6px; }
+button.big > svg.ic { width: 18px; height: 18px; }
+button.icon-only { padding: 6px 8px; }
+nav.views button > svg.ic { opacity: .85; }
+.pk-stage { margin: 14px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.pk { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 10px 0; border-top: 1px solid var(--line); }
+.pk > div { flex: 1; min-width: 220px; }
+.ws-steps { padding-left: 20px; display: grid; gap: 12px; }
+.ws-steps .row { margin-top: 6px; }
+.ws-group { border-top: 1px solid var(--line); padding: 8px 0; }
+.ws-group > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.ws-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px 18px; margin-top: 8px; }
+.ws-f { display: grid; gap: 4px; align-content: start; }
+.ws-f.wide { grid-column: 1 / -1; }
+.ws-f input[type=text], .ws-f select { width: 100%; }
+.ws-f textarea { font-family: inherit; font-size: 14px; }
+.ws-check { display: flex; gap: 8px; align-items: center; }
+.sheetprev > div { position: relative; display: inline-block; margin-top: 6px; }
+.sheetprev img { max-width: 240px; max-height: 160px; display: block; border-radius: 4px; }
+.sheetprev .sq img { width: 72px; height: 72px; object-fit: cover; }
+.sheetprev .grid2::before, .sheetprev .grid2::after { content: ""; position: absolute; background: #e3ac19; }
+.sheetprev .grid2::before { left: 50%; top: 0; bottom: 0; width: 2px; transform: translateX(-1px); }
+.sheetprev .grid2::after { top: 50%; left: 0; right: 0; height: 2px; transform: translateY(-1px); }
+dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--ink); max-width: 560px; padding: 20px; }
+dialog::backdrop { background: rgba(0,0,0,.3); }
+
+#drawer-btn, #scrim, nav.views .short, .short-only { display: none; }
+/* Half screen and narrower: chapter list becomes a slide-out drawer */
+@media (max-width: 1150px) {
+  .app { grid-template-columns: 1fr; }
+  #drawer-btn { display: inline-block; font-size: 18px; padding: 2px 8px; }
+  aside { position: fixed; top: 0; left: 0; bottom: 0; width: min(320px, 85vw); z-index: 35; transform: translateX(-102%); visibility: hidden; transition: transform .18s ease, visibility .18s; }
+  body.drawer aside { transform: none; visibility: visible; box-shadow: 4px 0 20px rgba(0,0,0,.25); }
+  body.drawer #scrim { display: block; position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 34; }
+  main { padding: 16px 18px 60px; }
+  header.top { gap: 8px; padding: 8px 10px; }
+  nav.views kbd, .next kbd, #fromclip kbd { display: none; }
+  .progress { min-width: 90px; }
+}
+@media (max-width: 860px) {
+  nav.views .full, .hide-narrow { display: none; }
+  nav.views .short, .short-only { display: inline; }
+  nav.views button { padding: 6px 8px; }
+  .progress .small { display: none; }
+  .stepper { gap: 3px; }
+  .stepper div { font-size: 10.5px; padding: 6px 2px; }
+  .stepper b { font-size: 13px; }
+  .ch-head h2 { font-size: 19px; }
+  #copyname { display: none; }
+  .next { gap: 10px; }
+  .next button.big { width: 100%; }
+  .card { padding: 12px 12px; }
+  .tabs button { padding: 6px 8px; font-size: 14px; }
+  .files li { flex-wrap: wrap; }
+  .files li code { flex-basis: 100%; order: -1; }
+  #bmode button { padding: 6px 8px; font-size: 13px; }
+}
+@media (max-width: 560px) {
+  header.top { flex-wrap: wrap; }
+  nav.views { order: 5; width: 100%; overflow-x: auto; }
+  .progress { display: none; }
+}
+
+/* ================================================================ 2.0: shared layout and controls */
+:root { --space: 12px; --side-w: 284px; }
+main { padding: 18px 24px 64px; }
+.wrap { max-width: 1080px; }
+.card { padding: 14px 16px; margin-bottom: 12px; }
+.card h3 { font-size: 16px; margin: 0 0 8px; }
+.card h3 .small { font-family: "Source Sans 3", system-ui, sans-serif; font-weight: 400; }
+.sec-h { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; }
+.sec-h h3 { margin: 0; flex: 1; }
+.lede { color: var(--muted); font-size: 13.5px; margin: 0 0 10px; max-width: 70ch; }
+button { min-height: 32px; }
+button.secondary { background: var(--panel2); }
+button.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 35%, var(--line)); }
+button.danger:hover:not(:disabled) { border-color: var(--bad); background: var(--soft-bad); }
+button.sm { padding: 3px 9px; min-height: 28px; font-size: 13.5px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.row { row-gap: 8px; }
+.muted-note { font-size: 12.5px; color: var(--muted); }
+.badge { display: inline-block; font-size: 11.5px; font-weight: 600; border-radius: 20px; padding: 1px 8px; background: var(--line); color: var(--muted); white-space: nowrap; }
+.badge.good { background: var(--soft-good); color: var(--good); } .badge.warn { background: var(--soft-warn); color: var(--warn); }
+.badge.bad { background: var(--soft-bad); color: var(--bad); } .badge.info { background: var(--soft-accent); color: var(--accent); }
+.alert { border-radius: 8px; padding: 10px 12px; font-size: 14px; border: 1px solid transparent; }
+.alert.bad { background: var(--soft-bad); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 30%, transparent); }
+.alert.warn { background: var(--soft-warn); color: var(--warn); }
+.alert.info { background: var(--soft-accent); color: var(--ink); }
+details > summary { cursor: pointer; }
+
+/* header: compact nav plus a labeled "More" menu */
+header.top { padding: 8px 14px; gap: 12px; min-height: 52px; }
+nav.views { gap: 0; overflow-x: auto; scrollbar-width: none; flex: 0 1 auto; min-width: 0; }
+nav.views::-webkit-scrollbar { display: none; }
+nav.views button { padding: 6px 10px; white-space: nowrap; min-height: 34px; }
+nav.views kbd { display: none; }
+.menu { position: relative; }
+.menu > summary { list-style: none; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; background: var(--panel); white-space: nowrap; font-size: 14px; min-height: 34px; }
+.menu > summary::-webkit-details-marker { display: none; }
+.menu > summary::after { content: "▾"; font-size: 11px; color: var(--muted); }
+.menu[open] > summary { border-color: var(--accent); }
+.menu > summary.on { background: var(--soft-accent); color: var(--accent); font-weight: 600; border-color: transparent; }
+.menu .pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 45; min-width: 230px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.25); padding: 6px; display: grid; gap: 2px; }
+.menu .pop button { border: none; background: none; text-align: left; justify-content: flex-start; width: 100%; padding: 7px 10px; border-radius: 6px; }
+.menu .pop button:hover { background: var(--panel2); }
+.menu .pop button.on { color: var(--accent); font-weight: 600; }
+.menu .pop .k { margin-left: auto; font: 11px var(--mono); color: var(--muted); }
+.menu .pop hr { border: none; border-top: 1px solid var(--line); margin: 4px 2px; }
+.progress { max-width: 220px; }
+#membar { padding: 5px 10px; }
+
+/* sidebar: collapsible, prominent search, collapsible parts */
+.app { grid-template-columns: var(--side-w) minmax(0, 1fr); }
+body.side-off .app { grid-template-columns: 0 minmax(0, 1fr); }
+body.side-off aside { visibility: hidden; border: none; }
+#drawer-btn { display: inline-flex; }
+aside .filters { padding: 10px; }
+.searchbox { position: relative; }
+.searchbox input { width: 100%; padding: 8px 10px 8px 32px; font-size: 14.5px; border-radius: 9px; }
+.searchbox svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--muted); pointer-events: none; }
+.part-h { display: flex; width: 100%; align-items: center; gap: 6px; border: none; background: none; border-radius: 0; text-align: left; cursor: pointer; padding: 10px 14px 4px; min-height: 0; }
+.part-h:hover { color: var(--ink); }
+.part-h .chev { transition: transform .15s; font-size: 10px; }
+.part-h.closed .chev { transform: rotate(-90deg); }
+.part-h .cnt { margin-left: auto; font-family: var(--mono); font-size: 10.5px; text-transform: none; letter-spacing: 0; }
+.ch-item.on .t { white-space: normal; }
+.ch-item { padding: 5px 12px 5px 14px; }
+
+/* chapter: header, compact stepper, one next action, grouped secondary actions */
+.ch-head { margin-bottom: 10px; align-items: center; }
+.ch-head h2 { font-size: 26px; }
+.steps { list-style: none; display: flex; align-items: center; gap: 0; padding: 0; margin: 0 0 12px; flex-wrap: nowrap; overflow-x: auto; }
+.steps li { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.steps li + li::before { content: ""; width: 22px; height: 2px; background: var(--line); margin: 0 6px; flex: none; }
+.steps li.done + li::before { background: var(--good); }
+.steps .dot { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; border: 2px solid var(--line); color: var(--muted); flex: none; }
+.steps li.done { color: var(--ink); }
+.steps li.done .dot { background: var(--good); border-color: var(--good); color: #fff; }
+.steps li.now { color: var(--accent); font-weight: 700; }
+.steps li.now .dot { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.next { border: 1px solid var(--accent); background: linear-gradient(0deg, var(--soft-accent), var(--soft-accent)), var(--panel); padding: 12px 14px; gap: 12px; }
+.next .why > div:last-child { font-size: 15px; }
+.next .side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.linkbtn { border: none; background: none; color: var(--accent); padding: 2px 4px; min-height: 0; font-size: 13px; text-decoration: underline; text-underline-offset: 2px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; margin: 0 0 12px; }
+.grp { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); overflow: hidden; }
+.grp .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 0 8px 0 10px; font-weight: 600; }
+.grp button { border: none; border-left: 1px solid var(--line); border-radius: 0; min-height: 32px; padding: 5px 10px; font-size: 13.5px; background: none; }
+.grp button:hover:not(:disabled) { background: var(--panel2); }
+.grp button.z { font-size: 12px; color: var(--muted); padding: 5px 8px; }
+.actions .spacer { flex: 1; }
+.tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
+.tabs button { white-space: nowrap; }
+
+/* batch */
+.bsteps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0 0 12px; border: none; }
+.bsteps button { display: grid; gap: 2px; text-align: left; padding: 9px 11px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel); min-height: 0; }
+.bsteps button b { font-size: 14px; } .bsteps button span { font-size: 12px; color: var(--muted); }
+.bsteps button.on { border-color: var(--accent); background: var(--soft-accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.range input[type=number] { width: 72px; }
+.range .err { color: var(--bad); font-size: 13px; }
+.miniprog { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; flex: 1; min-width: 120px; max-width: 260px; }
+.miniprog span { display: block; height: 100%; background: var(--accent); }
+
+/* overview */
+.sumbar { height: 14px; border-radius: 7px; overflow: hidden; display: flex; background: var(--line); margin: 6px 0 10px; }
+.sumbar span { height: 100%; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 20px; padding: 3px 10px; font-size: 13px; background: var(--panel2); cursor: pointer; min-height: 0; }
+.bkform { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 14px; align-items: center; }
+.bkform label { font-weight: 600; }
+.bkform input, .bkform select { width: 100%; max-width: 640px; }
+.bkform .muted-note { grid-column: 2; margin: -2px 0 8px; }
+.bkform .muted-note:empty { display: none; }
+@media (max-width: 700px) { .bkform { grid-template-columns: 1fr; } .bkform .muted-note { grid-column: 1; } }
+.chip i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.todo { list-style: none; padding: 0; margin: 0; }
+.todo li { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.todo li:last-child { border-bottom: none; }
+.todo .n { font-family: var(--mono); font-size: 12px; color: var(--muted); width: 28px; flex: none; }
+.parts { display: grid; grid-template-columns: minmax(160px, 1fr) 2fr auto; gap: 6px 12px; align-items: center; font-size: 13.5px; }
+
+/* build */
+.bgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.fieldset { border: 1px solid var(--line); border-radius: 9px; padding: 10px 12px; margin: 0; }
+.fieldset legend { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; padding: 0 4px; }
+.fieldset label { display: flex; gap: 8px; align-items: center; padding: 3px 0; font-size: 14px; }
+.fieldset select { width: 100%; }
+.outfile { display: grid; grid-template-columns: 1fr auto auto auto; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 13.5px; }
+.outfile code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.result-line { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+
+/* workspace checklist */
+.check { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.check > li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.check > li .tick { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--muted); }
+.check > li.done { background: var(--panel2); }
+.check > li.done .tick { background: var(--good); border-color: var(--good); color: #fff; }
+.check > li.done .ttl { color: var(--muted); }
+.check .ttl { font-weight: 600; }
+
+/* help */
+#help-search { width: 100%; max-width: 420px; padding: 8px 10px; }
+.hsec { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); margin-bottom: 8px; }
+.hsec > summary { padding: 10px 14px; font-weight: 600; }
+.hsec > div { padding: 0 16px 12px; font-size: 14.5px; }
+.hsec > div li { margin: 3px 0; }
+.keys { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; }
+
+/* games list */
+.gtable td { vertical-align: top; }
+.gacts { display: flex; gap: 6px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
+.gacts .menu .pop { min-width: 200px; }
+
+.pg-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* first-use invitation */
+#invite { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; border: 1px dashed var(--accent); border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; background: var(--soft-accent); font-size: 14px; }
+#invite .grow { min-width: 200px; }
+
+/* guided tour */
+#tour-ring { position: fixed; z-index: 60; border-radius: 10px; box-shadow: 0 0 0 3px var(--accent), 0 0 0 9999px rgba(0,0,0,.42); pointer-events: none; transition: all .2s ease; }
+#tour-pop { position: fixed; z-index: 61; width: min(380px, calc(100vw - 24px)); background: var(--panel); color: var(--ink); border: 1px solid var(--accent); border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.35); padding: 14px 16px; }
+#tour-pop h4 { margin: 0 0 4px; font: 900 17px/1.25 "Playfair Display", Georgia, serif; }
+#tour-pop p { margin: 0 0 10px; font-size: 14.5px; }
+#tour-pop .tp-top { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+#tour-pop .tp-bar { height: 4px; border-radius: 2px; background: var(--line); margin-bottom: 10px; overflow: hidden; }
+#tour-pop .tp-bar span { display: block; height: 100%; background: var(--accent); }
+#tour-pop .tp-btns { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+#tour-pop .tp-note { font-size: 12.5px; color: var(--warn); margin: -4px 0 10px; }
+@media (prefers-reduced-motion: reduce) { #tour-ring { transition: none; } }
+
+@media (max-width: 1150px) {
+  #drawer-btn { display: inline-flex; }
+  body.side-off .app, .app { grid-template-columns: minmax(0, 1fr); }
+  body.side-off aside { visibility: hidden; }
+}
+@media (max-width: 860px) {
+  .bsteps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .parts { grid-template-columns: 1fr 1fr auto; }
+}
+
+/* ================= Book Builder shell ================= */
+header.top { gap: 10px; padding: 6px 12px; min-height: 48px; }
+.app-brand { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); text-decoration: none; font-weight: 700; font-size: 15px; white-space: nowrap; }
+.app-mark { width: 22px; height: 22px; fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+details.proj > summary { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; max-width: 240px; font-size: 14px; list-style: none; }
+details.proj > summary::-webkit-details-marker { display: none; }
+details.proj .pname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pop-h { font-size: 12px; color: var(--muted); padding: 4px 10px; text-transform: uppercase; letter-spacing: .05em; }
+.pop button.on { background: var(--soft-accent); color: var(--accent); }
+.pop a { display: flex; align-items: center; gap: 8px; padding: 6px 10px; color: var(--ink); text-decoration: none; border-radius: 5px; }
+.pop a:hover { background: var(--panel2); }
+nav.views { gap: 0; overflow: hidden; }
+nav.views button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 6px; font-size: 14px; white-space: nowrap; }
+nav.views button > svg.ic { width: 20px; height: 20px; }
+nav.views button:hover { background: var(--panel2); color: var(--ink); }
+nav.views button:focus-visible, #subnav a:focus-visible, .ctx-nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+@media (max-width: 1360px) { nav.views button .full { display: none; } nav.views button { padding: 6px 8px; } }
+#app-settings.on { background: var(--soft-accent); color: var(--accent); }
+#subnav { background: var(--panel); border-bottom: 1px solid var(--line); padding: 6px 18px 0; }
+#subnav:empty { display: none; }
+.crumbs { font-size: 12.5px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+.crumbs a { color: var(--muted); text-decoration: none; } .crumbs a:hover { color: var(--accent); text-decoration: underline; }
+.crumbs .sep { opacity: .6; }
+.subs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: thin; margin-top: 4px; }
+.subs a { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; font-size: 13.5px; color: var(--muted); text-decoration: none; border-bottom: 2px solid transparent; white-space: nowrap; }
+.subs a:hover { color: var(--ink); }
+.subs a.on { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.subs svg.ic { width: 16px; height: 16px; }
+body[data-side="none"] .app { grid-template-columns: 1fr; }
+body[data-side="none"] #sidebar, body[data-side="none"] #drawer-btn { display: none; }
+body.lib #topprog, body.lib #drawer-btn { display: none; }
+#ctx { display: none; }
+body[data-side="ctx"] #sidebar .filters, body[data-side="ctx"] #list { display: none; }
+body[data-side="ctx"] #ctx { display: block; padding: 10px; }
+.ctx-nav { display: flex; flex-direction: column; gap: 1px; margin-bottom: 14px; }
+.ctx-nav a { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 5px; color: var(--ink); text-decoration: none; font-size: 14px; }
+.ctx-nav a:hover { background: var(--panel2); } .ctx-nav a.on { background: var(--soft-accent); color: var(--accent); font-weight: 600; }
+.ctx-h { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 12px 8px 4px; }
+.ctx-row { display: flex; justify-content: space-between; gap: 8px; padding: 4px 8px; font-size: 13.5px; border-bottom: 1px solid var(--line); }
+.ctx-book { display: flex; gap: 10px; padding: 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); font-size: 14px; }
+.ctx-book img, .ctx-book .cover-ph { width: 56px; height: 84px; object-fit: cover; border-radius: 3px; flex: none; }
+.swatches { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 8px; } .swatches span { width: 22px; height: 22px; border-radius: 4px; border: 1px solid var(--line); }
+.card { border-radius: 6px; box-shadow: none; }
+.page-h { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 12px; }
+.page-h h2 { margin: 0; font-size: 22px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 0 16px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 6px 12px; color: var(--ink); text-decoration: none; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.chip-s { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel2); color: var(--muted); white-space: nowrap; }
+.chip-s.on { background: var(--soft-accent); border-color: var(--accent); color: var(--accent); }
+.st { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 1px 7px; border-radius: 4px; white-space: nowrap; }
+.st svg.ic { width: 14px; height: 14px; }
+.st-pass { background: var(--soft-good); color: var(--good); } .st-warn { background: var(--soft-warn); color: var(--warn); }
+.st-fail { background: var(--soft-bad); color: var(--bad); } .st-unchecked, .st-na { background: var(--panel2); color: var(--muted); border: 1px solid var(--line); }
+.planned { display: flex; gap: 10px; align-items: flex-start; border: 1px dashed var(--line); border-radius: 6px; padding: 10px 12px; background: var(--panel2); margin: 8px 0; }
+.alert.warn { background: var(--soft-warn); color: var(--ink); border: 1px solid var(--warn); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; }
+#ws-memory #membar { display: inline-flex; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tbl th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--line); padding: 6px 8px; }
+.tbl td { border-bottom: 1px solid var(--line); padding: 6px 8px; vertical-align: top; }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl.comp tbody tr { cursor: pointer; } .tbl.comp tbody tr:hover { background: var(--panel2); }
+.w40 { width: 35%; } .nowrap { white-space: nowrap; } .mono { font-family: var(--mono); font-size: 12.5px; }
+.hbar { display: block; height: 8px; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.hbar span { display: block; height: 100%; background: var(--accent); }
+.feed, .health, .actions-list, .checklist, .plain { list-style: none; padding: 0; margin: 0; }
+.feed li, .health li, .actions-list li, .checklist li { display: flex; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.feed li:last-child, .health li:last-child, .actions-list li:last-child, .checklist li:last-child { border-bottom: none; }
+.plain li { padding: 4px 0; display: flex; gap: 8px; align-items: center; }
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.metric { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.metric > span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.metric b { font-size: 22px; font-weight: 650; line-height: 1.2; } .metric b small { font-size: 13px; color: var(--muted); font-weight: 500; }
+.metric .small-b { font-size: 14px; } .metric.m-fail { border-color: var(--bad); } .metric.m-warn { border-color: var(--warn); }
+.identity { display: grid; grid-template-columns: 150px 1fr; gap: 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px; margin-bottom: 16px; }
+.id-cover { padding: 0; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; background: var(--panel2); aspect-ratio: 2 / 3; }
+.id-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.eyebrow { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.identity h2 { margin: 2px 0 4px; font-size: 28px; }
+.id-sub { margin: 0 0 6px; font-size: 16px; color: var(--muted); } .id-meta { margin: 0 0 8px; }
+.id-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.cover-ph { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 100%; min-height: 120px; color: var(--muted); font-size: 12.5px; text-align: center; padding: 8px; background: var(--panel2); }
+.cover-ph svg.ic { width: 28px; height: 28px; }
+.milestones { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.ms { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; }
+.ms svg.ic { width: 20px; height: 20px; margin-top: 2px; }
+.ms-pass svg.ic { color: var(--good); } .ms-warn svg.ic { color: var(--warn); } .ms-fail svg.ic { color: var(--bad); } .ms-unchecked svg.ic { color: var(--muted); }
+.previews { display: flex; gap: 16px; flex-wrap: wrap; } .previews figure { margin: 0; width: 160px; text-align: center; font-size: 13px; }
+.previews figure img, .previews figure .cover-ph { width: 160px; height: 240px; object-fit: cover; border: 1px solid var(--line); border-radius: 4px; }
+.previews.big figure { width: 240px; } .previews.big figure img, .previews.big figure .cover-ph { width: 240px; height: 360px; }
+.books { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.book { display: flex; gap: 12px; border: 1px solid var(--line); border-radius: 6px; padding: 10px; background: var(--panel); }
+.book .cover { width: 84px; height: 126px; padding: 0; overflow: hidden; border-radius: 3px; flex: none; }
+.book .cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.book-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.book-t { font-weight: 650; font-size: 16px; } .bk-meta { display: flex; gap: 6px; }
+.book .miniprog { max-width: none; }
+.continue { display: grid; grid-template-columns: minmax(260px, 360px) 1fr; gap: 16px; align-items: start; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.tile { display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; color: var(--ink); text-decoration: none; background: var(--panel); font-size: 13.5px; cursor: pointer; }
+.tile:hover { border-color: var(--accent); } .tile svg.ic { width: 20px; height: 20px; color: var(--accent); } .tile span { color: var(--muted); }
+.tile.pick input { position: absolute; opacity: 0; } .tile.pick:has(input:checked) { border-color: var(--accent); background: var(--soft-accent); }
+.tile.pick { position: relative; } .tile.pick:has(input:focus-visible) { outline: 2px solid var(--accent); }
+.flow { margin: 0; padding-left: 20px; } .flow li { padding: 6px 0; border-bottom: 1px solid var(--line); } .flow li b { display: inline-block; min-width: 140px; }
+.flow li span { color: var(--muted); margin-right: 8px; } .flow li:last-child { border-bottom: none; }
+.order ol { columns: 2; font-size: 13.5px; }
+.colors { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+.color { display: flex; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: 6px; padding: 6px; }
+.color input { width: 40px; height: 32px; border: none; padding: 0; background: none; } .color span { display: flex; flex-direction: column; }
+.gf-list { display: grid; gap: 0; max-height: 460px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+.gf { display: flex; gap: 10px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+.thumbs { display: flex; flex-wrap: wrap; gap: 12px; } .thumbs figure { margin: 0; width: 130px; font-size: 12px; word-break: break-all; }
+.thumbs img { width: 130px; height: 130px; object-fit: contain; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; }
+.chk { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
+pre.log { white-space: pre-wrap; font-family: var(--mono); font-size: 12px; max-height: 360px; overflow: auto; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 10px; }
+.bkform textarea { width: 100%; max-width: 640px; }
+body.compact .card { padding: 10px 12px; margin-bottom: 10px; } body.compact { font-size: 14.5px; }
+@media (max-width: 760px) {
+  .identity { grid-template-columns: 90px 1fr; } .identity h2 { font-size: 22px; }
+  .continue { grid-template-columns: 1fr; } .grid2 { grid-template-columns: 1fr; }
+  details.proj > summary { max-width: 140px; } #topprog { display: none; }
+}
+
+/* ---- layout: the sub-navigation sits above its own scrolling area, so nothing scrolls under it ---- */
+main { display: flex; flex-direction: column; overflow: hidden; padding: 0; min-height: 0; }
+#subnav { position: static; flex: none; }
+.scroller { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 24px 64px; scroll-padding-top: 12px; }
+@media (max-width: 860px) { .scroller { padding: 14px 14px 60px; } }
+/* where the sidebar already lists this section's pages, don't repeat them as tabs (desktop only) */
+@media (min-width: 1151px) { body[data-side="ctx"] #subnav .subs { display: none; } body[data-side="ctx"] #subnav { padding-bottom: 6px; } }
+/* ---- Save Work ---- */
+.git-state { margin-bottom: 12px; }
+.git-banner { display: flex; gap: 10px; align-items: flex-start; border-radius: 6px; padding: 10px 12px; border: 1px solid transparent; }
+.git-banner svg.ic { width: 20px; height: 20px; margin-top: 1px; flex: none; }
+.git-banner { color: var(--ink); }   /* status color on the border and icon only; text stays readable */
+.git-banner.st-pass { border-color: var(--good); } .git-banner.st-warn { border-color: var(--warn); }
+.git-banner.st-fail { border-color: var(--bad); }
+.git-banner.st-pass svg.ic { color: var(--good); } .git-banner.st-warn svg.ic { color: var(--warn); } .git-banner.st-fail svg.ic { color: var(--bad); } .git-banner.st-unchecked, .git-banner.st-na { border-color: var(--line); }
+.git-banner div { font-weight: 400; } .git-banner b { display: block; }
+.git-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.git-grid .metric b { word-break: break-word; }
+.git-actions { margin-top: 8px; }
+.git-result { display: grid; gap: 6px; margin-top: 10px; }
+.gfiles { list-style: none; margin: 6px 0 0; padding: 0; max-height: 320px; overflow: auto; }
+.gfiles li { display: flex; gap: 10px; align-items: baseline; padding: 3px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; min-width: 0; }
+.gpath { overflow-wrap: anywhere; min-width: 0; }
+.gk { flex: none; font-size: 11.5px; font-weight: 600; padding: 0 6px; border-radius: 4px; background: var(--panel2); border: 1px solid var(--line); color: var(--muted); min-width: 96px; text-align: center; }
+.gk-conflict { background: var(--soft-bad); color: var(--bad); border-color: var(--bad); }
+.gk-deleted { color: var(--bad); } .gk-added, .gk-renamed { color: var(--good); }
+pre.wrapraw { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 360px; overflow: auto; }
+#v-git details > summary { cursor: pointer; }
+/* ---- Latest files (Build sidebar) ---- */
+.ctx-file { display: grid; grid-template-columns: auto 1fr auto; gap: 2px 8px; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.ctx-file .fname { grid-column: 1 / 3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 12px; }
+.ctx-file .fmt { font-weight: 650; }
+.ctx-file button { grid-row: 1 / 3; grid-column: 3; padding: 3px 6px; }
+
+/* ---- Research Library ---- */
+.rl-drop { display: flex; gap: 10px; align-items: center; border: 1px dashed var(--line); border-radius: 6px; padding: 12px 14px; color: var(--muted); background: var(--panel); cursor: pointer; margin-bottom: 12px; font-size: 14px; }
+.rl-drop.over, .rl-drop:hover { border-color: var(--accent); color: var(--ink); }
+.rl-bar, .rl-selbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.rl-bar input[type=search] { flex: 1; min-width: 240px; }
+.rl-selbar { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+.rl-selbar button { font-size: 13.5px; }
+.rl-grid { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.2fr); gap: 14px; align-items: start; }
+@media (max-width: 1000px) { .rl-grid { grid-template-columns: 1fr; } }
+.rl-list { max-height: 70vh; overflow: auto; } .rl-preview { position: sticky; top: 0; max-height: 80vh; overflow: auto; }
+.rl-items { list-style: none; margin: 0; padding: 0; }
+.rl-items li { display: flex; gap: 8px; align-items: flex-start; border-bottom: 1px solid var(--line); padding: 6px 4px; }
+.rl-items li.on { background: var(--soft-accent); }
+.rl-items input { margin-top: 5px; }
+.rl-item { all: unset; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.rl-item:focus-visible { outline: 2px solid var(--accent); }
+.rl-t { font-weight: 600; overflow-wrap: anywhere; } .rl-m { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.rl-x { font-size: 13px; color: var(--muted); } .rl-x mark { background: var(--soft-warn); color: var(--ink); }
+.rl-segs details { border-bottom: 1px solid var(--line); padding: 4px 0; } .rl-segs summary { cursor: pointer; font-size: 13.5px; }
+.rl-chbox { display: flex; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin-bottom: 10px; background: var(--panel2); }
+label.btn { cursor: pointer; }
+
+/* ---- wizard and structure editor ---- */
+.wz-steps { list-style: none; display: flex; flex-wrap: wrap; gap: 4px; padding: 0; margin: 0 0 12px; }
+.wz-steps button { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 4px 10px; font-size: 13px; color: var(--muted); }
+.wz-steps li.on button { border-color: var(--accent); color: var(--accent); font-weight: 600; background: var(--soft-accent); }
+.wz-steps li.done button { color: var(--ink); }
+.wz-part { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+.wz-part ol, .st-list { margin: 8px 0; padding-left: 0; list-style: none; }
+.wz-part li, .st-list li { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
+.wz-part li input, .st-list li input { flex: 1; min-width: 0; }
+.st-list li.locked input { opacity: .75; }
+.swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--line); vertical-align: middle; }
+
+.assets3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
+.assets3 figure { margin: 0; font-size: 13px; }
+.asset-box { height: 150px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel2); display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 6px; }
+.asset-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+.is-thumb { width: 44px; height: 44px; flex: none; border: 1px solid var(--line); border-radius: 4px; background: var(--panel2); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.is-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.is-big { border: 1px solid var(--line); border-radius: 6px; background: var(--panel2); display: flex; justify-content: center; max-height: 320px; overflow: hidden; }
+.is-big img { max-width: 100%; max-height: 320px; object-fit: contain; }
+.chip.on { border-color: var(--accent); color: var(--accent); }
+
+/* Expert mode (Settings › Preferences › Guidance): hide tutorial invitations and Guide me links. */
+body.expert #invite, body.expert [data-tour-at], body.expert #guide-me, body.expert .guide-btn { display: none !important; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <button class="ghost icon-only" id="drawer-btn" title="Show or hide the chapter list (C)" aria-label="Show or hide the chapter list" aria-controls="sidebar"></button>
+    <a href="#/a/library/all" class="app-brand" id="app-logo" title="Book Builder: Library">
+      <svg class="app-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/><path d="M6 8h2"/><path d="M6 12h2"/><path d="M16 8h2"/><path d="M16 12h2"/></svg>
+      <span class="app-name hide-narrow">Book Builder</span></a>
+    <details class="menu proj" id="proj">
+      <summary id="proj-sum" aria-label="Current book: switch books"></summary>
+      <div class="pop" id="proj-pop" role="menu"></div>
+    </details>
+    <nav class="views" id="views" aria-label="Main navigation"></nav>
+    <span class="grow"></span>
+    <div class="progress" id="topprog" title="Approved / drafted / total chapters">
+      <div class="bar" id="topbar"></div>
+      <div class="small muted" id="toptext"></div>
+    </div>
+    <button class="ghost icon-only" id="app-help" title="Help (?)" aria-label="Help"></button>
+    <button class="ghost icon-only" id="app-settings" title="Book Builder settings" aria-label="Book Builder settings"></button>
+    <details class="menu" id="more">
+      <summary id="more-sum" aria-label="More">More</summary>
+      <div class="pop" role="menu">
+        <button id="tour-menu" role="menuitem">Guided tutorial</button>
+        <button id="refresh" role="menuitem">Refresh <span class="k">R</span></button>
+        <button id="theme" role="menuitem">Light / dark theme</button>
+        <hr>
+        <button id="quit" class="danger" role="menuitem">Quit Book Builder</button>
+      </div>
+    </details>
+  </header>
+
+  <div id="scrim"></div>
+  <aside id="sidebar" aria-label="Chapters">
+    <div class="filters">
+      <div class="searchbox"><svg aria-hidden="true"><use href="/icons.svg#search"/></svg><input type="search" id="search" placeholder="Search chapters  ( / )" aria-label="Search chapters"></div>
+      <select id="filter">
+        <option value="all">All chapters</option>
+        <option value="me">Waiting on me</option>
+        <option value="claude">Waiting on Claude</option>
+        <option value="fix">Has problems</option>
+        <option value="research">Not started</option>
+        <option value="saveresearch">Waiting for research reply</option>
+        <option value="write">Research done, ready to write</option>
+        <option value="approve">Ready to approve</option>
+        <option value="advance">Approved</option>
+      </select>
+    </div>
+    <div class="list" id="list"></div>
+    <div id="ctx"></div>
+  </aside>
+
+  <main>
+    <div id="subnav"></div>
+    <div class="scroller" id="scroller">
+    <div class="wrap">
+      <div id="invite" class="hidden" role="region" aria-label="Guided tutorial"></div>
+      <!-- CHAPTER -->
+      <section id="v-chapter"></section>
+
+      <!-- BATCH -->
+      <section id="v-batch" class="hidden">
+        <div class="card">
+          <div class="sec-h"><h3>Batch</h3><button class="linkbtn" data-tour-at="10">Guide me</button></div>
+          <p class="lede">Work through a run of chapters one step at a time. Each step goes down the list; the highlighted row is next.</p>
+          <div class="bsteps" id="bmode" role="tablist" aria-label="Batch step">
+            <button data-m="rcopy" role="tab"><b>1 · Copy research</b><span>Prompts into new chats</span></button>
+            <button data-m="rsave" role="tab"><b>2 · Save research</b><span>ZIPs or replies back in</span></button>
+            <button data-m="copy" role="tab"><b>3 · Copy writing</b><span>Prompts into the same chats</span></button>
+            <button data-m="save" role="tab"><b>4 · Save drafts</b><span>Replies back in</span></button>
+          </div>
+          <div class="row range">
+            <label for="bfrom">Chapters</label> <input type="number" id="bfrom" min="1" max="60"> <label for="bto">to</label> <input type="number" id="bto" min="1" max="60">
+            <button class="sm" id="bnext10">Next 10 ›</button>
+            <label class="small" title="Also download each prompt's ZIP of reference files, to attach in ChatGPT"><input type="checkbox" id="bzip"> with ZIP</label>
+            <span class="err" id="brangeerr" role="alert"></span>
+          </div>
+        </div>
+        <div class="card next">
+          <div class="why grow" id="bwhy"></div>
+          <div class="side"><button class="primary big" id="bgo"></button><span class="muted-note" id="bprog"></span></div>
+        </div>
+        <div class="card hidden" id="bresult"></div>
+        <div class="card"><table class="batch" id="btable"></table></div>
+      </section>
+
+      <!-- OVERVIEW -->
+      <section id="v-overview" class="hidden"></section>
+      <section id="v-page" class="hidden"></section>
+
+      <!-- BUILD -->
+      <section id="v-build" class="hidden">
+        <div class="card">
+          <div class="sec-h"><h3>Build the book</h3><button class="primary big" id="buildgo">Build</button></div>
+          <div class="bgrid">
+            <fieldset class="fieldset"><legend>Output formats</legend>
+              <label><input type="checkbox" class="fmt" value="pdf" checked> PDF</label>
+              <label><input type="checkbox" class="fmt" value="epub"> EPUB</label>
+              <label><input type="checkbox" class="fmt" value="html"> HTML</label>
+              <label><input type="checkbox" class="fmt" value="docx"> Word</label>
+            </fieldset>
+            <fieldset class="fieldset"><legend>Edition</legend>
+              <select id="audience" aria-label="Edition">
+                <option value="">Full edition (all boxes)</option>
+                <option value="perspective:men">Only men's perspective boxes</option>
+                <option value="perspective:women">Only women's perspective boxes</option>
+                <option value="perspective:nonbinary">Only non-binary perspective boxes</option>
+              </select>
+              <p class="muted-note">Chapters not yet approved show their placeholder text.</p>
+            </fieldset>
+            <fieldset class="fieldset"><legend>Contents (PDF)</legend>
+              <label><input type="radio" name="toc" value="simple" checked> Simple: parts and chapters</label>
+              <label><input type="radio" name="toc" value="detailed"> Detailed: with sections</label>
+              <label><input type="checkbox" id="bookmarks" checked> PDF bookmarks (every section)</label>
+              <label><input type="checkbox" id="toclinks" checked> Clickable contents</label>
+            </fieldset>
+          </div>
+          <div class="result-line" id="buildres"></div>
+          <details id="buildlogbox" class="hidden" style="margin-top:8px"><summary class="small">Build log</summary><pre class="raw" id="buildlog"></pre></details>
+        </div>
+        <div class="card"><h3>Build results</h3><div id="outputs"></div></div>
+      </section>
+
+            <!-- GAMES -->
+      <section id="v-games" class="hidden">
+        <div class="card">
+          <div class="sec-h"><h3>1 · Make a game</h3><button class="linkbtn" data-tour-at="14">Guide me</button></div>
+          <p class="lede">ChatGPT builds each game from a prompt. The copied prompt is complete; the ZIP adds the full API docs and templates.</p>
+          <div class="row">
+            <select id="gprompt-ch" aria-label="Chapter for the game"></select>
+            <button class="primary" id="gprompt">Copy game prompt</button>
+            <button id="gpromptzip" title="Copy the same prompt and download a ZIP with the full API docs and templates">+ ZIP</button>
+            <button id="gdocs" title="The whole Game API as one Markdown file">API docs (.md)</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>2 · Import a game</h3>
+          <p class="lede">Checked against API 1.0/1.1, the schema, chapter, branching, assets and editorial rules, then installed for review. Nothing is published until you approve it.</p>
+          <div class="bgrid">
+            <fieldset class="fieldset"><legend>From a ChatGPT reply</legend>
+              <p class="muted-note" style="margin-top:0">Click the copy button under ChatGPT's reply first.</p>
+              <div class="row"><button class="primary" id="gpaste">Import from clipboard</button><button id="gpastecheck">Check only</button></div>
+            </fieldset>
+            <fieldset class="fieldset"><legend>From a ZIP file</legend>
+              <p class="muted-note" style="margin-top:0">A package with game.json and activity.json at its top level.</p>
+              <div class="row"><input type="file" id="gfile" accept=".zip" class="hidden"><button id="gimport">Import ZIP…</button><button id="gvalidate">Check ZIP only…</button></div>
+            </fieldset>
+          </div>
+          <label class="small" style="display:flex;gap:8px;margin-top:10px"><input type="checkbox" id="greplace"> Update a game that's already installed (same id, higher version)</label>
+          <div id="gresult"></div>
+        </div>
+        <div class="card">
+          <h3>3 · Installed games</h3>
+          <div id="glist"></div>
+        </div>
+      </section>
+
+            <!-- WEBSITE -->
+      <section id="v-website" class="hidden">
+        <div class="card">
+          <div class="sec-h"><h3>Public website</h3><button class="sm" id="wstatus">Refresh status</button>
+            <details class="menu"><summary class="sm">More</summary><div class="pop"><button id="wsetup">Set up publishing repo…</button></div></details></div>
+          <div id="wconfig"></div>
+        </div>
+        <div class="card">
+          <div class="sec-h"><h3>Publish in three steps</h3><button class="linkbtn" data-tour-at="13">Guide me</button></div>
+          <ol class="check">
+            <li><span class="tick">1</span><div><div class="ttl">Check</div><div class="muted-note">See which approved chapters and games will go out, and any warnings.</div><div class="row" style="margin-top:6px"><button id="wplan">Check what will be published</button></div></div></li>
+            <li><span class="tick">2</span><div><div class="ttl">Preview</div><div class="muted-note">Build the site here and open it in a new tab. Nothing leaves this computer.</div><div class="row" style="margin-top:6px"><button id="wpreview">Build local preview</button></div></div></li>
+            <li><span class="tick">3</span><div><div class="ttl">Publish</div><div class="muted-note">Builds, checks and pushes the generated site to the public repo (this repo stays private). Asks first.</div><div class="row" style="margin-top:6px"><button class="primary" id="wpublish">Publish website…</button></div></div></li>
+          </ol>
+        </div>
+        <div class="card hidden" id="wplanbox"></div>
+        <details class="card hidden" id="wlogbox"><summary class="small">Log</summary><pre class="raw" id="wlog"></pre></details>
+      </section>
+
+            <!-- GIT -->
+      <section id="v-git" class="hidden">
+        <div class="page-h"><h2>Save work</h2><span class="grow"></span><button class="linkbtn" data-tour-at="12">Guide me</button>
+          <button class="sm" id="gitfetch" title="Ask GitHub whether it has anything new (needs the internet)">Check GitHub</button>
+          <button class="sm ghost" id="gitrefresh" title="Read the status again">Refresh</button></div>
+        <div id="gitstate" class="git-state" role="status" aria-live="polite"><p class="muted small">Reading the status…</p></div>
+        <div class="git-grid" id="gitgrid"></div>
+        <div class="card">
+          <h3>Save your changes</h3>
+          <p class="muted-note" style="margin-top:0">Commit saves the book's folders (<span id="gitpaths"></span>) on this computer. Push uploads saved commits to GitHub. Nothing happens until you press a button.</p>
+          <div class="row">
+            <input type="text" id="gitmsg" class="grow" placeholder="What changed, e.g. “Drafts for chapters 21–30”" aria-label="Commit message">
+          </div>
+          <div class="row git-actions">
+            <button id="gitcommit">Commit</button>
+            <button class="primary" id="gitpush">Commit &amp; push</button>
+            <button id="gitpushonly">Push</button>
+          </div>
+          <p class="muted-note" id="gitwhy" aria-live="polite"></p>
+          <div id="gitresult" class="git-result hidden" role="status" aria-live="polite"></div>
+        </div>
+        <div class="card" id="gitfilescard"><h3>Changes <span class="small muted" id="gitcount"></span></h3><div id="gitfiles"></div></div>
+        <div class="card"><details id="gitlogbox"><summary><b>Recent commits</b></summary><ul class="feed" id="gitlog"></ul></details></div>
+        <div class="card"><details id="gitoutbox"><summary><b>Technical details</b> <span class="muted-note">git status and command output</span></summary>
+          <pre class="raw wrapraw" id="gitout"></pre></details></div>
+      </section>
+
+            <!-- HELP -->
+      <section id="v-workspace" class="hidden">
+        <div id="ws-memory" class="alert warn hidden" role="status">Research changed since you last uploaded the memory files to the ChatGPT Project: rebuild the files (step 3) and upload them again. <button id="membar" class="sm">Update ChatGPT memory</button></div>
+        <div class="card">
+          <div class="sec-h"><h3>Set up a ChatGPT Project</h3><button class="linkbtn" data-tour-at="2">Guide me</button></div>
+          <p class="lede">Optional: every prompt works pasted on its own. A Project gives every chat the same instructions and files. Adjust the form below first if you like.</p>
+          <ol class="check" id="ws-check">
+            <li data-ws="project"><span class="tick">1</span><div><div class="ttl">Create a Project in ChatGPT</div><div class="muted-note">Sidebar › Projects › New project; name it after the book.</div>
+              <div class="row" style="margin-top:6px"><button class="sm" id="ws-project">I've done this</button></div></div></li>
+            <li data-ws="instructions"><span class="tick">2</span><div><div class="ttl">Paste the instructions</div><div class="muted-note">Into the Project's instructions box. <span id="ws-count"></span></div>
+              <div class="row" style="margin-top:6px"><button class="primary" id="ws-instr">Copy instructions</button></div></div></li>
+            <li data-ws="files"><span class="tick">3</span><div><div class="ttl">Upload the files</div><div class="muted-note">Build them, then upload all of them to the Project's files (replace older copies). <span id="ws-filecount"></span></div>
+              <div class="row" style="margin-top:6px"><button class="primary" id="ws-files">Build files</button><button id="ws-zip">Download as ZIP</button><button id="ws-finder">Show folder</button><button id="ws-uploaded">I've uploaded them</button></div>
+              <details class="small" style="margin-top:6px"><summary>Files</summary><ul id="ws-filelist"></ul></details></div></li>
+            <li data-ws="initial"><span class="tick">4</span><div><div class="ttl">Start the first chat</div><div class="muted-note">A new chat inside the Project: paste and send.</div>
+              <div class="row" style="margin-top:6px"><button class="primary" id="ws-initial">Copy initial prompt</button></div></div></li>
+          </ol>
+                    <p class="muted-note" style="margin:10px 0 0">When research changes, a yellow <b>Update ChatGPT memory</b> button appears at the top: rebuild and re-upload the files.</p>
+        </div>
+        <div class="card">
+          <div class="row"><h3 class="grow" style="margin:0">Customize</h3><button id="ws-reset" class="ghost">Reset to defaults</button><button class="primary" id="ws-save">Save</button></div>
+          <p class="small muted">These choices shape the instructions, the files and the initial prompt. They're saved in <code>workspace.yml</code>.</p>
+          <form id="ws-form" class="ws-form" onsubmit="return false"></form>
+        </div>
+        <div class="card">
+          <div class="row"><h3 class="grow" style="margin:0">Preview</h3>
+            <span class="seg" id="ws-pv"><button data-pv="instructions" class="on">Instructions</button><button data-pv="initial">Initial prompt</button></span></div>
+          <pre class="raw" id="ws-preview" style="max-height:420px;overflow:auto;white-space:pre-wrap"></pre>
+        </div>
+        <div class="card">
+          <h3>All prompts</h3>
+          <p class="small muted"><b>Copy</b> puts a complete prompt on your clipboard: paste it into a new chat (inside the Project if you have one) and send. <b>ZIP</b> copies the same prompt and downloads its reference files to attach, for chats outside a Project.</p>
+          <div class="row"><label class="small">For <select id="pk-ch"></select></label></div>
+          <div id="pk-list"></div>
+        </div>
+      </section>
+      <section id="v-help" class="hidden">
+        <div class="card">
+          <div class="sec-h"><h3>Help</h3><button class="primary" id="help-tour">Start guided tutorial</button><button id="help-resume" class="hidden">Resume tutorial</button></div>
+          <input type="search" id="help-search" placeholder="Search help…" aria-label="Search help">
+        </div>
+        <div id="help-secs">
+          <details class="hsec" open><summary>How a chapter goes</summary><div><ol>
+            <li><b>Research:</b> copy the research prompt into a <b>new</b> ChatGPT chat (web search on). Import the ZIP it makes (from Downloads), or copy its reply and save it. Simple chapters can skip research.</li>
+            <li><b>Write:</b> copy the writing prompt into the <b>same</b> chat.</li>
+            <li><b>Save:</b> use the copy button under ChatGPT's reply, then <b>Save reply</b>. The reply is checked first: right chapter, complete, boxes intact, not a duplicate.</li>
+            <li><b>Check:</b> copy the check message and paste it into Claude Code.</li>
+            <li><b>Revise</b> if Claude asks, in the same chat, then save the new reply.</li>
+            <li><b>Approve</b> when Claude says it's ready.</li></ol>
+            <p>The big button on each chapter always does the next step.</p></div></details>
+          <details class="hsec"><summary>Batch: many chapters at once</summary><div><p>Pick a range, then go through the four steps: copy research prompts, save research, copy writing prompts, save drafts. The button does the highlighted row and moves down. Ranges must be chapter numbers from 1 to the last chapter, first to last.</p></div></details>
+          <details class="hsec"><summary>Build, save and publish</summary><div><ul>
+            <li><b>Build</b> makes the PDF, EPUB, HTML and Word files in <code>dist/</code>. Contents: <i>Simple</i> lists parts and chapters; bookmarks still list every section.</li>
+            <li><b>Save work</b> (More menu) commits on this computer, or commits and pushes to GitHub. Nothing happens until you press a button.</li>
+            <li><b>Website:</b> Check, then Preview, then Publish. Only approved chapters and games are published; it asks before publishing.</li></ul></div></details>
+          <details class="hsec"><summary>Games</summary><div><p>Copy the game prompt for an approved chapter, paste it into ChatGPT, copy the reply and <b>Import from clipboard</b>. ChatGPT also makes two image sheets and an icon; choose them when asked. Games stay in review until you preview and approve them.</p></div></details>
+          <details class="hsec"><summary>ChatGPT setup</summary><div>
+            <p><b>Nothing to set up:</b> every Copy button gives a complete prompt. <b>ZIP</b> buttons also download reference files to attach. For shared background across chats, set up a Project in <b>ChatGPT workspace</b>. <button class="sm" id="help-ws">Open ChatGPT workspace</button></p></div></details>
+          <details class="hsec"><summary>Keyboard shortcuts</summary><div class="keys">
+            <kbd>1</kbd><span>Book</span><kbd>2</kbd><span>Chapter</span><kbd>3</kbd><span>Batch</span><kbd>4</kbd><span>Build</span>
+            <kbd>5</kbd><span>Save work</span><kbd>6</kbd><span>Games</span><kbd>7</kbd><span>Website</span><kbd>8</kbd><span>ChatGPT workspace</span>
+            <kbd>?</kbd><span>Help</span><kbd>/</kbd><span>Search chapters</span><kbd>N</kbd><span>Do the next step</span><kbd>V</kbd><span>Save reply from clipboard</span>
+            <kbd>J</kbd> / <kbd>K</kbd><span>Next / previous chapter (also ↓ ↑)</span><kbd>C</kbd><span>Show or hide the chapter list</span><kbd>R</kbd><span>Refresh</span></div></details>
+          <details class="hsec"><summary>Common problems</summary><div><ul>
+            <li><b>“The clipboard is empty”</b>: in ChatGPT use the copy button under the reply, then try again.</li>
+            <li><b>“This looks like another chapter”</b>: you copied a reply from a different chat. Open the chat named for this chapter.</li>
+            <li><b>Reply cut off</b>: type “continue” in ChatGPT, then copy the complete reply.</li>
+            <li><b>No research ZIP found</b>: it must be in Downloads and named like <code>ch05-research.zip</code>; or save the reply text instead.</li>
+            <li><b>Game image sheet too small</b>: ask ChatGPT for the sheet at its highest resolution.</li>
+            <li><b>Publish failed</b>: read the log, fix the problem and press Publish again; nothing partial goes live.</li></ul></div></details>
+        </div>
+      </section>
+    </div>
+    </div>
+  </main>
+</div>
+<div id="toasts"></div>
+<div id="busy" class="hidden" role="dialog" aria-modal="true" aria-labelledby="busytext"><div class="job">
+  <div id="busytext">Working…</div>
+  <div class="jbar indet" id="jbar" role="progressbar" aria-labelledby="busytext" aria-valuemin="0" aria-valuemax="100"><span></span></div>
+  <div class="jmeta" aria-live="polite"><span id="jmsg"></span><span id="jpct"></span></div>
+  <div class="jlog" id="jlog"></div>
+</div></div>
+<div id="tour-ring" class="hidden" aria-hidden="true"></div>
+<div id="tour-pop" class="hidden" role="dialog" aria-modal="false" aria-labelledby="tour-title" aria-describedby="tour-text"></div>
+<dialog id="dlg"><div id="dlgbody"></div><div class="row" style="justify-content:flex-end;margin-top:16px" id="dlgbtns"></div></dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = (s, root = document) => [...root.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store = { get(k, d) { try { const v = localStorage.getItem("bm-" + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+                set(k, v) { try { localStorage.setItem("bm-" + k, JSON.stringify(v)); } catch {} } };
+
+const SHORT = { research: "Not started", saveresearch: "Save research", write: "Write prompt", save: "Paste reply", fix: "Problems", claude: "Ask Claude", revise: "Revise", approve: "Ready", advance: "Approved" };
+const ME = ["research", "saveresearch", "write", "save", "fix", "revise", "approve"];
+const STAGES = [["research", "Research"], ["prompt", "Prompt"], ["draft", "Draft"], ["check", "Claude check"], ["revise", "Revise"], ["approved", "Approved"]];
+const STAGE_COLOR = { research: "var(--line)", saveresearch: "var(--muted)", write: "#4a8aa8", save: "var(--accent)", fix: "var(--bad)", claude: "var(--claude)", revise: "var(--warn)", approve: "var(--good)", advance: "var(--good)" };
+
+let S = null;          // /api/state
+let D = null;          // /api/chapter for current
+let view = store.get("view", "chapter"); if (view === "prompts") view = "workspace";
+let tab = store.get("tab", "save");
+let docMode = store.get("docMode", "rendered");
+let pending = null;    // reply preview waiting to be saved
+let lastHelp = null;
+let kindOverride = null; // {n, k} when the user flips the Research / Chapter draft switch
+const saveKind = () => kindOverride?.n === D.n ? kindOverride.k : (["research", "saveresearch"].includes(D.code) ? "research" : "draft");
+
+// POSTs run as background jobs on the server: quick ones answer at once, long ones return a job id
+// that we follow, moving the progress bar in the busy overlay.
+async function api(path, body) {
+  const opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, background: true }) };
+  const r = await fetch(path, opt);
+  let j = await r.json();
+  if (!r.ok || j.error) throw new Error(j.error || r.statusText);
+  if (j.job) j = await follow(j.job);
+  if (j && j.error) throw new Error(j.error);
+  return j;
+}
+async function follow(id) {
+  for (;;) {
+    await new Promise(res => setTimeout(res, 350));
+    const r = await fetch("/api/jobs/" + id); const s = await r.json();
+    if (!r.ok) throw new Error(s.error || "Lost track of the task.");
+    showJob(s);
+    if (s.done) { if (s.error) throw new Error(s.error); return s.result; }
+  }
+}
+const fmtTime = s => s < 60 ? `${Math.round(s)} s` : `${Math.floor(s / 60)} min ${String(Math.round(s % 60)).padStart(2, "0")} s`;
+function showJob(s) {
+  const pct = s.progress == null ? null : Math.round(s.progress * 100);
+  const bar = $("#jbar");
+  bar.classList.toggle("indet", pct == null || pct === 0);
+  bar.firstElementChild.style.width = pct ? pct + "%" : "";
+  if (pct == null) bar.removeAttribute("aria-valuenow"); else bar.setAttribute("aria-valuenow", pct);
+  $("#jmsg").textContent = s.message || "";
+  $("#jpct").textContent = (pct ? pct + "% · " : "") + fmtTime(s.elapsed);
+  $("#jlog").textContent = (s.log || []).slice(-5).join("\n");
+}
+function toast(msg, kind = "", ms = 3500) {
+  const t = document.createElement("div"); t.className = "toast " + kind; t.textContent = msg;
+  $("#toasts").append(t); setTimeout(() => t.remove(), ms);
+}
+async function busy(text, fn) {
+  $("#busytext").textContent = text; $("#busy").classList.remove("hidden");
+  $("#jbar").classList.add("indet"); $("#jbar").firstElementChild.style.width = ""; $("#jmsg").textContent = ""; $("#jpct").textContent = ""; $("#jlog").textContent = "";
+  try { return await fn(); } catch (e) { toast(e.message, "bad", 6000); throw e; } finally { $("#busy").classList.add("hidden"); }
+}
+function ask(html, buttons) {
+  return new Promise(res => {
+    $("#dlgbody").innerHTML = html; const b = $("#dlgbtns"); b.innerHTML = "";
+    buttons.forEach(([label, val, cls]) => { const e = document.createElement("button"); e.textContent = label; if (cls) e.className = cls;
+      e.onclick = () => { $("#dlg").close(); res(val); }; b.append(e); });
+    $("#dlg").onclose = () => res(null);
+    $("#dlg").showModal();
+  });
+}
+// Icons: Lucide (ISC license, tools/web/ICONS-LICENSE.txt), served as one sprite. Buttons get their icon
+// from this list, so templates stay plain; a MutationObserver decorates whatever is rendered later.
+const ic = name => `<svg class="ic" aria-hidden="true" focusable="false"><use href="/icons.svg#${name}"/></svg>`;
+const ICONS = [
+  ['[data-view="chapter"]', "file-text"], ['[data-view="batch"]', "layers"], ['[data-view="overview"]', "book-open"],
+  ['[data-view="build"]', "hammer"], ['[data-view="git"]', "git-commit-horizontal"], ['[data-view="games"]', "gamepad-2"],
+  ['[data-view="website"]', "globe"], ['[data-view="workspace"]', "settings"], ['[data-view="help"]', "circle-help"],
+  ["#drawer-btn", "panel-left"], ["#app-help", "circle-help"], ["#app-settings", "settings-2"], ["#refresh", "refresh-cw"], ["#theme", "sun-moon"], ["#quit", "power"], ["#membar", "triangle-alert"],
+  ["#prev", "chevron-left"], ["#next", "chevron-right"], ["#copyname", "tag"], ["#help-tour", "rocket"], ["#tour-menu", "rocket"],
+  ["#a-research", "search"], ["#a-skip", "skip-forward"], ["#a-write", "pen-line"], ["#a-claude", "bot"],
+  ["#a-revise", "pencil-line"], ["#a-approve", "badge-check"], ["[data-zip]", "file-archive"],
+  ["#zipdl", "file-archive"], ["#fromclip", "clipboard-paste"], ["#dosave", "save"], ["#clr", "x"], ["#sw", "refresh-cw"],
+  ["#dcopy", "clipboard-copy"], ["[data-copy]", "clipboard-copy"], ["#dopen", "external-link"], ["[data-open]", "external-link"],
+  ["[data-reveal]", "folder-open"], ["#buildgo", "hammer"], ["#gitcommit", "git-commit-horizontal"], ["#gitpush", "upload"], ["#gitpushonly", "cloud-upload"], ["#gitfetch", "refresh-cw"],
+  ["#gprompt", "clipboard-copy"], ["#gpromptzip", "file-archive"], ["#gdocs", "download"], ["#gpaste", "clipboard-paste"],
+  ["#gpastecheck", "shield-check"], ["#gimport", "file-up"], ["#gvalidate", "shield-check"],
+  ['[data-g="approve"]', "badge-check"], ['[data-g="unapprove"]', "undo-2"], ['[data-g="assign"]', "book-open"],
+  ['[data-g="export"]', "download"], ['[data-g="update"]', "sparkles"], ['[data-g="updatezip"]', "file-archive"], ['[data-g="remove"]', "trash-2"], [".button-link > button", "eye"],
+  ["#gawith", "image"], ["#gacancel", "x"], ["#wplan", "list-checks"], ["#wpreview", "eye"], ["#wpublish", "cloud-upload"],
+  ["#wstatus", "activity"], ["#wsetup", "settings"], ["#help-ws", "settings"],
+  ["[data-pk-copy]", "clipboard-copy"], ["[data-pk-zip]", "file-archive"],
+  ["#ws-instr", "clipboard-copy"], ["#ws-files", "package"], ["#ws-zip", "file-archive"], ["#ws-finder", "folder-open"],
+  ["#ws-uploaded", "circle-check"], ["#ws-initial", "rocket"], ["#ws-save", "save"], ["#ws-reset", "undo-2"],
+];
+function decorate() {
+  for (const [sel, name] of ICONS) for (const el of document.querySelectorAll(sel)) {
+    if (el.dataset.ic === name) continue;
+    el.querySelector(":scope > svg.ic")?.remove();
+    el.dataset.ic = name; el.insertAdjacentHTML("afterbegin", ic(name));
+  }
+}
+new MutationObserver(decorate).observe(document.body, { childList: true, subtree: true });
+decorate();
+
+// Prompt packs: the clipboard prompt is always complete on its own; the ZIP adds reference files.
+async function promptPack(kind, n, zip, game) {
+  const r = await busy(zip ? "Making the prompt and its ZIP of reference files…" : "Making the prompt…",
+    () => api("/api/prompts/" + (zip ? "zip" : "copy"), { kind, n, game }));
+  if (!r.ok) { await ask(`<h3 style="margin-top:0">That didn't work</h3><pre class="raw">${esc(r.message)}</pre>`, [["OK", true, "primary"]]); return r; }
+  if (r.download) { const a = document.createElement("a"); a.href = r.download; a.download = r.pack.zipName; document.body.append(a); a.click(); a.remove(); }
+  toast(zip ? `Prompt copied and ${r.pack.zipName} downloaded. In ChatGPT: attach the ZIP, paste (⌘V), send.`
+            : `Prompt copied (${r.pack.words.toLocaleString()} words). Paste it into a new ChatGPT chat and send.`, "good", 7000);
+  return r;
+}
+
+const pill = code => `<span class="pill p-${code}">${SHORT[code]}</span>`;
+const pad2 = n => String(n).padStart(2, "0");
+const chName = c => c.chat || `Ch ${String(c.n).padStart(2, "0")} · ${c.title}`;
+const num = c => c.num || String(c.n).padStart(2, "0");
+const ref = c => c.ref || `chapter ${c.n}`;
+const partLabel = c => c.kind && c.kind !== "chapter" ? c.partName : `Part ${c.part} · ${c.partName}`;
+const neighbor = (c, d) => { const i = S.chapters.findIndex(x => x.n === c.n); const x = S.chapters[i + d]; return x ? x.n : c.n; };
+const byN = n => S.chapters.find(c => c.n === n);
+const lastNum = () => Math.max(...S.chapters.filter(c => !c.kind || c.kind === "chapter").map(c => c.n));
+
+// ---------------------------------------------------------------- guided tutorial
+// A lightweight tour: each step opens the right view, highlights a real control and explains it.
+// It only navigates (views and tabs). It never presses buttons, so it can't approve, overwrite,
+// publish, commit, push or delete anything. Steps that need the user to do something in ChatGPT
+// or Claude use "I've done this", because the page can't detect that reliably.
+const TOUR_STEPS = [
+  { view: "overview", target: ["#sidebar"], title: "The Book tab and chapter list",
+    text: "The list on the left has every chapter and its status. Search with /, and click a part name to fold it. The Book tab (1) shows what's waiting on you and holds the book-wide settings." },
+  { view: "workspace", target: ["#ws-check"], optional: true, title: "Optional: a ChatGPT Project",
+    text: "A Project gives every ChatGPT chat the same instructions and files. Every prompt also works on its own, so you can skip this." },
+  { view: "chapter", target: ["#a-research"], task: true, title: "Copy a research prompt",
+    text: "Pick a chapter on the left, then Copy prompt under Research. Paste it into a new ChatGPT chat with web search on." },
+  { view: "chapter", tab: "save", target: ["#zipdl", "#fromclip", "#tabs"], task: true, title: "Bring the research back",
+    text: "When ChatGPT is done, import its research ZIP from Downloads, or copy its reply and save it here. Simple chapters can use Skip instead." },
+  { view: "chapter", target: ["#a-write"], task: true, title: "Copy the writing prompt",
+    text: "Copy the writing prompt and paste it into the same ChatGPT chat." },
+  { view: "chapter", tab: "save", target: ["#fromclip", "#tabs"], task: true, title: "Save ChatGPT's draft",
+    text: "Copy ChatGPT's reply with the copy button under it, then save it here. It's checked first: right chapter, complete, not a duplicate." },
+  { view: "chapter", target: ["#a-claude"], task: true, title: "Ask Claude to check",
+    text: "Copy the check message and paste it into Claude Code. Claude checks the draft against the sources and the rules." },
+  { view: "chapter", target: ["#a-revise"], task: true, title: "Revise if needed",
+    text: "If Claude asks for changes, copy the revision prompt into the same chat, then save the new reply." },
+  { view: "chapter", target: ["#a-approve"], task: true, title: "Approve the chapter",
+    text: "When Claude says it's ready, approve the latest draft. It always asks first; this tutorial never presses it for you." },
+  { view: "batch", target: ["#bmode"], title: "Batch: many chapters at once",
+    text: "Pick a range, then go through the four steps. The big button does the highlighted row and moves down." },
+  { view: "build", target: [".bgrid", "#buildgo"], task: true, title: "Build the book",
+    text: "Choose formats, edition and contents, then Build. The files appear under Build results with Open and Show in Finder." },
+  { view: "git", target: ["#gitpush", "#gitcommit"], task: true, title: "Save to GitHub",
+    text: "Commit saves on this computer; Commit & push also uploads to GitHub. Nothing is saved until you press one." },
+  { view: "website", target: ["#v-website .check", "#wplan"], title: "Preview and publish the website",
+    text: "Check, then Preview, then Publish. Only approved chapters and games go out, and Publish asks before it starts." },
+  { view: "games", target: ["#gprompt"], optional: true, title: "Optional: games",
+    text: "Copy a game prompt for an approved chapter, then import ChatGPT's reply. Games stay in review until you preview and approve them." },
+  { view: "research-library", rl: true, group: "research", target: ["#rl-drop"], optional: true, title: "Research Library: upload",
+    text: "Drop PDFs, Word, Excel, PowerPoint or other documents here (or use Upload files). Originals are kept and their text is indexed on this computer." },
+  { view: "research-library", group: "research", target: ["#rl-list"], optional: true, title: "Preview a source",
+    text: "Click a source to preview it. Its text is split into pages, sheets, slides or sections so citations stay precise." },
+  { view: "research-library", group: "research", target: ["#rl-preview"], optional: true, title: "Assign chapters and tags",
+    text: "In the preview, pick the chapters a source supports and add tags, then Save. One source can serve many chapters." },
+  { view: "research-library", group: "research", target: ["#rl-q"], optional: true, title: "Search everything",
+    text: "Search all the text at once. Put a phrase in \"quotes\". Results show the exact page or slide." },
+  { view: "research-library", group: "research", target: ["#rl-selbar"], optional: true, title: "Select sources for a prompt",
+    text: "Tick whole sources, or single sections in search results or the preview. The count shows here." },
+  { view: "research-library", group: "research", target: ["#rl-review"], optional: true, title: "Ask for a research review",
+    text: "Copy a review prompt with the selected evidence for ChatGPT or Claude: strength, contradictions, gaps, citations and illustration ideas. Long selections are trimmed, and the prompt says what was left out." },
+  { view: "research-library", group: "research", target: ["#rl-save-review"], optional: true, title: "Save the review",
+    text: "Copy the AI's reply, then press this to archive it in the library. Nothing in the manuscript changes." },
+  // ---- short tutorials for single sections (Guide me on those pages)
+  { view: "new-book", group: "wizard", target: [".wz-steps"], title: "New book: seven short steps",
+    text: "Identity, direction, brand, graphics, structure, outputs, then a summary. Only the title is required; everything can change later." },
+  { view: "new-book", group: "wizard", target: ["#wz-title", "#v-page .card"], title: "Start with the title",
+    text: "Type the title (and author if you like), then Next. Skip any step you're not sure about." },
+  { view: "new-book", group: "wizard", target: ["#wz-next", "#wz-go"], title: "Finish and open",
+    text: "The last step shows a summary. Create book makes its own folder; it's then in your Library, with publishing off until you set up its website." },
+  { view: "brand-studio", group: "brand", target: [".wz-steps"], title: "Brand Studio: six steps",
+    text: "Vibe and voice, colors, typography, logo and icons, imagery, then review and apply. It styles this book's outputs only, never Book Builder itself." },
+  { view: "brand-studio", group: "brand", target: ["#bs-prompt"], title: "Ask an AI for a starting point",
+    text: "Copy the brand prompt into ChatGPT or Claude, copy its whole reply, then Load AI suggestion. You review everything before saving." },
+  { view: "brand-studio", group: "brand", target: ["#bs-save"], title: "Save as you go",
+    text: "Save keeps the brand without changing any output. On the last step, Save and apply writes it into the PDF, e-book and website." },
+  { view: "image-studio", group: "images", target: ["#is-plan", "#is-chp"], title: "Plan images from the book itself",
+    text: "Copy the visual plan prompt (whole book) or a chapter image prompt, which quotes the chapter and its research sources." },
+  { view: "image-studio", group: "images", target: ["#is-imp"], title: "Import the proposals",
+    text: "Copy the AI's reply and import it. Each proposal becomes a planned image you can edit; factual diagrams must cite sources." },
+  { view: "image-studio", group: "images", target: ["#is-pack", "#is-ret"], title: "Make the images",
+    text: "Select images, download an image request ZIP for ChatGPT, then import the ZIP of images it sends back. You can also add files by hand." },
+  { view: "image-studio", group: "images", target: ["#is-detail"], title: "Review and approve",
+    text: "Fill in alt text, credit and license, tick the review checks, then Approve. Copy the Markdown snippet to place an image in a chapter yourself." },
+];
+const TOUR_GROUPS = { core: "Guided tutorial", research: "Research Library tour", wizard: "New book tour", brand: "Brand Studio tour", images: "Image Studio tour" };
+const TOUR_VERSION = 2;
+// Progress is kept per book and per tutorial version ("tour:<book id>:v2"), so each book starts fresh.
+const tourKey = k => `${k}:${(typeof BB !== "undefined" && BB.app && (BB.app.library || []).find(b => b.path === BB.app.project)?.id) || "book"}:v${TOUR_VERSION}`;
+const groupOf = i => TOUR_STEPS[i]?.group || "core";
+const groupRange = g => { const idx = TOUR_STEPS.map((s, i) => (s.group || "core") === g ? i : -1).filter(i => i >= 0); return [idx[0], idx.at(-1)]; };
+// Where "Guide me" on a chapter starts, by the chapter's next step.
+const TOUR_STEP_FOR = { research: 2, saveresearch: 3, write: 4, save: 5, fix: 5, claude: 6, revise: 7, approve: 8, advance: 8 };
+const TOUR = { on: false, i: 0, el: null, lastFocus: null, range: [0, 0] };
+const tourSaved = () => { const s = store.get(tourKey("tour"), null); return s && !s.done && s.pos > 0 ? s.pos : 0; };
+const guidanceOff = () => document.body.classList.contains("expert");
+function tourStartGroup(g) { tourStart(groupRange(g)[0], g === "core"); }
+let inviteHidden = false;
+
+async function tourStart(i = 0, fresh = false) {
+  i = Math.max(0, Math.min(i, TOUR_STEPS.length - 1));
+  TOUR.range = groupRange(groupOf(i));
+  if (fresh && groupOf(i) === "core") store.set(tourKey("tour"), { pos: 0, done: false });
+  TOUR.lastFocus = document.activeElement;
+  TOUR.on = true; store.set(tourKey("tourSeen"), true);
+  $("#invite").classList.add("hidden");
+  addEventListener("resize", tourPlace); addEventListener("scroll", tourPlace, true);
+  await tourGo(i);
+}
+function tourEnd(finished = false) {
+  TOUR.on = false;
+  if (groupOf(TOUR.i) === "core") store.set(tourKey("tour"), finished ? { pos: 0, done: true } : { pos: TOUR.i, done: false });
+  $("#tour-ring").classList.add("hidden"); $("#tour-pop").classList.add("hidden");
+  removeEventListener("resize", tourPlace); removeEventListener("scroll", tourPlace, true);
+  if (finished) toast("Tutorial finished. Start it again any time from Help or the More menu.", "good", 6000);
+  tourInvite(); $("#help-resume")?.classList.toggle("hidden", !tourSaved());
+  TOUR.lastFocus?.focus?.();
+}
+async function tourGo(i) {
+  TOUR.i = i;
+  if (groupOf(i) === "core") store.set(tourKey("tour"), { pos: i, done: false });
+  const s = TOUR_STEPS[i];
+  if (view !== s.view) setView(s.view);
+  if (s.tab && view === "chapter" && tab !== s.tab) { tab = s.tab; store.set("tab", tab); renderChapter(); }
+  if (narrow() && s.target[0] === "#sidebar") document.body.classList.add("drawer");
+  else if (s.target[0] === "#sidebar") document.body.classList.remove("side-off");
+  let el = null;
+  for (let tries = 0; tries < 20 && !el; tries++) {   // views render asynchronously; wait briefly
+    el = s.target.map(sel => document.querySelector(sel)).find(e => e && e.offsetParent !== null) || null;
+    if (!el) await new Promise(r => setTimeout(r, 75));
+  }
+  TOUR.el = el;
+  if (el) el.scrollIntoView({ block: "center", inline: "nearest" });
+  const notes = [];
+  if (!el) notes.push("This control isn't showing right now, so there's nothing to highlight. You can still read the step and go on.");
+  else if (el.disabled) notes.push(`This button is greyed out for this chapter right now${el.title ? ` (${el.title.toLowerCase()})` : ""}.`);
+  if (s.view === "chapter" && D?.code === "advance") notes.push("This chapter is already approved, so there's nothing to do here; the tutorial just shows where things are.");
+  const [first, lastI] = TOUR.range, last = i === lastI, pos = i - first + 1, total = lastI - first + 1;
+  $("#tour-pop").innerHTML = `
+    <div class="tp-top"><span>${TOUR_GROUPS[groupOf(i)]} · step ${pos} of ${total}${s.optional ? " · optional" : ""}</span><button class="linkbtn" id="tp-restart">Start from beginning</button></div>
+    <div class="tp-bar"><span style="width:${pos / total * 100}%"></span></div>
+    <h4 id="tour-title" tabindex="-1">${esc(s.title)}</h4>
+    <p id="tour-text">${esc(s.text)}</p>
+    ${notes.map(n => `<p class="tp-note">${esc(n)}</p>`).join("")}
+    <div class="tp-btns">
+      <button id="tp-back" ${i === first ? "disabled" : ""}>Back</button>
+      <button class="primary" id="tp-next">${last ? "Finish" : s.task && el && !el.disabled && (s.view !== "chapter" || D?.code !== "advance") ? "I've done this" : "Next"}</button>
+      ${last ? "" : `<button id="tp-skip">Skip</button>`}
+      <span class="grow"></span><button class="ghost" id="tp-exit" title="Exit (Esc). You can resume later.">Exit</button>
+    </div>`;
+  $("#tour-pop").classList.remove("hidden");
+  $("#tp-back").onclick = () => tourGo(i - 1);
+  $("#tp-next").onclick = () => last ? tourEnd(true) : tourGo(i + 1);
+  if (!last) $("#tp-skip").onclick = () => tourGo(i + 1);
+  $("#tp-exit").onclick = () => tourEnd();
+  $("#tp-restart").onclick = () => tourGo(first);
+  tourPlace();
+  requestAnimationFrame(() => $("#tour-title").focus());
+}
+function tourPlace() {
+  if (!TOUR.on) return;
+  const ring = $("#tour-ring"), pop = $("#tour-pop"), el = TOUR.el;
+  const vw = innerWidth, vh = innerHeight, pw = pop.offsetWidth, ph = pop.offsetHeight;
+  if (!el || el.offsetParent === null) {
+    ring.classList.add("hidden");
+    pop.style.left = `${(vw - pw) / 2}px`; pop.style.top = `${Math.max(12, (vh - ph) / 2)}px`; return;
+  }
+  const r = el.getBoundingClientRect(), pad = 6;
+  ring.classList.remove("hidden");
+  Object.assign(ring.style, { left: `${r.left - pad}px`, top: `${r.top - pad}px`, width: `${r.width + pad * 2}px`, height: `${Math.min(r.height, vh - 24) + pad * 2}px` });
+  if (r.height > vh * 0.45 && r.width < vw * 0.45) {   // tall, narrow target (the sidebar): put the popover beside it
+    const left = r.right + 14 + pw < vw - 12 ? r.right + 14 : Math.max(12, r.left - pw - 14);
+    pop.style.left = `${left}px`; pop.style.top = `${Math.max(12, Math.min(r.top + 24, vh - ph - 12))}px`; return;
+  }
+  let top = r.bottom + 14;
+  if (top + ph > vh - 12) top = r.top - ph - 14;
+  if (top < 12) top = Math.min(vh - ph - 12, Math.max(12, r.top + 12));
+  let left = Math.min(Math.max(12, r.left), vw - pw - 12);
+  if (r.width > vw * 0.5) left = Math.min(Math.max(12, r.left + 24), vw - pw - 12);
+  pop.style.left = `${left}px`; pop.style.top = `${top}px`;
+}
+function tourInvite() {
+  const box = $("#invite");
+  if (!box) return;
+  const saved = tourSaved();
+  if (TOUR.on || inviteHidden || guidanceOff() || store.get("tourDismissed", false) || (!saved && store.get(tourKey("tourSeen"), false))) { box.classList.add("hidden"); return; }
+  box.classList.remove("hidden");
+  box.innerHTML = saved
+    ? `<span class="grow">You stopped the guided tutorial for this book at step ${saved + 1} of ${groupRange("core")[1] + 1}.</span><button class="primary sm" id="inv-go">Resume tutorial</button><button class="sm" id="inv-restart">Start from beginning</button><button class="ghost sm" id="inv-no">Don't show again</button>`
+    : `<span class="grow"><b>New to this book?</b> A short guided tutorial walks through the whole workflow without changing anything.</span><button class="primary sm" id="inv-go">Start guided tutorial</button><button class="sm" id="inv-later">Not now</button><button class="ghost sm" id="inv-no">Don't show again</button>`;
+  $("#inv-go").onclick = () => saved ? tourStart(saved) : tourStart(0, true);
+  if ($("#inv-restart")) $("#inv-restart").onclick = () => tourStart(0, true);
+  if ($("#inv-later")) $("#inv-later").onclick = () => { inviteHidden = true; box.classList.add("hidden"); };
+  $("#inv-no").onclick = () => { store.set("tourDismissed", true); box.classList.add("hidden"); };
+}
+
+// ---------------------------------------------------------------- loading
+async function load(keepDetail = false) {
+  S = await api("/api/state");
+  renderTop(); renderList();
+  if (!keepDetail || !D || D.n !== S.current) D = await api("/api/chapter?n=" + S.current);
+  else D = await api("/api/chapter?n=" + S.current);
+  renderView();
+}
+async function go(n) {
+  if (!byN(n)) n = S.chapters.some(c => c.n === S.current) ? S.current : S.chapters[0].n;
+  if (n !== S.current) pending = null, lastHelp = null;
+  S.current = n; await api("/api/current", { n });
+  D = await api("/api/chapter?n=" + n);
+  renderList(); if (view !== "batch") setView("chapter"); else renderView();
+  document.querySelector(`.ch-item[data-n="${n}"]`)?.scrollIntoView({ block: "nearest" });
+}
+
+function renderTop() {
+  const c = S.chapters, tot = c.length;
+  const appr = c.filter(x => x.code === "advance").length;
+  const drafted = c.filter(x => x.version > 0 && x.code !== "advance").length;
+  $("#topbar").innerHTML = `<span style="width:${appr / tot * 100}%;background:var(--good)"></span><span style="width:${drafted / tot * 100}%;background:var(--accent);opacity:.55"></span>`;
+  $("#membar").classList.toggle("on", !!S.memoryStale);
+  $("#toptext").textContent = `${appr}/${tot} approved${drafted ? ` · ${drafted} in progress` : ""}`;
+  $("#toptext").parentElement.title = `${appr} approved · ${drafted} in progress · ${tot} chapters and sections`;
+}
+
+function renderList() {
+  const q = $("#search").value.toLowerCase().trim(), f = $("#filter").value;
+  const closed = new Set(store.get("closedParts", []));
+  let html = "", lastPart = null;
+  const shown = S.chapters.filter(c => (!q || `${num(c)} ${c.n} ${c.title}`.toLowerCase().includes(q))
+    && (f === "all" || (f === "me" ? ME.includes(c.code) : c.code === f)));
+  for (const c of shown) {
+    const pk = String(c.part);
+    if (c.part !== lastPart) {
+      const inPart = shown.filter(x => x.part === c.part), appr = inPart.filter(x => x.code === "advance").length;
+      const isClosed = closed.has(pk) && !q;
+      html += `<button class="part-h ${isClosed ? "closed" : ""}" data-part="${esc(pk)}" aria-expanded="${!isClosed}"><span class="chev" aria-hidden="true">▼</span>${esc(partLabel(c))}<span class="cnt">${appr}/${inPart.length}</span></button>`;
+      lastPart = c.part;
+    }
+    if (closed.has(pk) && !q && c.n !== S.current) continue;
+    html += `<div class="ch-item ${c.n === S.current ? "on" : ""}" data-n="${c.n}" title="${esc(num(c) + " · " + c.title + " — " + c.label)}" role="button" tabindex="0">
+      <span class="num">${num(c)}</span><span class="t">${esc(c.title)}</span>${c.serious ? pill("fix") : pill(c.code)}</div>`;
+  }
+  $("#list").innerHTML = html || `<p class="muted small" style="padding:14px">No chapters match.</p>`;
+}
+
+// Old view names go through Book Builder's navigation (tools/web/builder.js), which then calls showView.
+function setView(v) {
+  const r = LEGACY[v];
+  if (r) return bbGo(r[0], r[1]);
+  showView(v);
+}
+function showView(v) {
+  view = v;
+  $("#more").open = false;
+  $$("main section").forEach(s => s.classList.toggle("hidden", s.id !== "v-" + v));
+  renderView();
+}
+function renderView() {
+  tourInvite(); $("#help-resume").classList.toggle("hidden", !tourSaved());
+  ({ page: renderPage, chapter: renderChapter, batch: renderBatch, overview: renderOverview, build: renderBuild, git: renderGit, games: renderGames, website: renderWebsite, workspace: renderWorkspace, prompts: renderWorkspace, help: () => {} })[view]();
+}
+
+// ---------------------------------------------------------------- prompts view
+const STAGE_NAMES = { plan: "Plan the book", research: "Research", write: "Write", revise: "Revise", extras: "Extras" };
+let KINDS = null;
+async function renderPrompts() {
+  KINDS = KINDS || (await api("/api/prompts/kinds")).kinds;
+  const sel = $("#pk-ch");
+  sel.innerHTML = S.chapters.map(c => `<option value="${c.n}" ${c.n === S.current ? "selected" : ""}>${esc(chName(c))}</option>`).join("");
+  const stages = [...new Set(KINDS.map(k => k.stage))];
+  $("#pk-list").innerHTML = stages.map(st => `<div class="pk-stage">${esc(STAGE_NAMES[st] || st)}</div>` +
+    KINDS.filter(k => k.stage === st && k.needs !== "game").map(k => `<div class="pk"><div><b>${esc(k.title)}</b>${k.needs === "none" ? "" : ' <span class="small muted">· for the chapter above</span>'}<div class="small muted">${esc(k.description)}</div></div>
+      <button class="primary" data-pk-copy="${k.id}">Copy</button><button data-pk-zip="${k.id}">ZIP</button></div>`).join("")).join("");
+  const n = () => KINDS && +sel.value;
+  $$("[data-pk-copy]").forEach(b => b.onclick = () => promptPack(b.dataset.pkCopy, n(), false));
+  $$("[data-pk-zip]").forEach(b => b.onclick = () => promptPack(b.dataset.pkZip, n(), true));
+}
+
+// ---------------------------------------------------------------- workspace view
+let WS = null, wsPv = "instructions", wsTimer = null, wsLast = null;
+function wsField(f, v) {
+  const id = "wsf-" + f.key, help = f.help ? `<div class="small muted">${esc(f.help)}</div>` : "";
+  const need = f.need === "required" ? ' <span class="small muted">(needed)</span>' : "";
+  if (f.type === "check") return `<label class="ws-check"><input type="checkbox" name="${f.key}" ${v ? "checked" : ""}> ${esc(f.label)}</label>${help}`;
+  let input;
+  if (f.type === "textarea") input = `<textarea id="${id}" name="${f.key}" rows="${f.rows || 3}">${esc(v ?? "")}</textarea>`;
+  else if (f.type === "select") input = `<select id="${id}" name="${f.key}">${f.options.map(o => `<option ${o === v ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+  else if (f.type === "chapter") input = `<select id="${id}" name="${f.key}"><option value="">The first chapter not yet approved</option>${WS.chapters.map(c => `<option value="${c.n}" ${c.n === v ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>`;
+  else input = `<input type="text" id="${id}" name="${f.key}" value="${esc(v ?? "")}">`;
+  return `<label for="${id}"><b>${esc(f.label)}</b>${need}</label>${help}${input}`;
+}
+function wsValues() {
+  const out = {};
+  for (const f of WS.fields) {
+    const el = $(`#ws-form [name="${f.key}"]`); if (!el) continue;
+    out[f.key] = f.type === "check" ? el.checked : f.type === "chapter" ? (el.value ? +el.value : null) : el.value;
+  }
+  return out;
+}
+function wsShow() {
+  if (!wsLast) return;
+  $("#ws-preview").textContent = wsPv === "instructions" ? wsLast.instructions : wsLast.initial;
+  const over = wsLast.chars > wsLast.limit;
+  $("#ws-count").innerHTML = `${wsLast.chars.toLocaleString()} of ${wsLast.limit.toLocaleString()} characters${over ? ' <b style="color:var(--bad)">· too long for ChatGPT: shorten the rules or style</b>' : ""}`;
+  $$("#ws-pv button").forEach(b => b.classList.toggle("on", b.dataset.pv === wsPv));
+}
+async function wsPreview() {
+  const r = await fetch("/api/workspace/preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ values: wsValues() }) });
+  wsLast = await r.json(); wsShow();
+}
+async function renderWorkspace() {
+  WS = await api("/api/workspace");
+  const groups = [...new Set(WS.fields.map(f => f.group))];
+  $("#ws-form").innerHTML = groups.map((g, i) => `<details class="ws-group" ${i === 0 ? "open" : ""}><summary>${esc(g)}</summary><div class="ws-grid">` +
+    WS.fields.filter(f => f.group === g).map(f => `<div class="ws-f ${f.type === "textarea" ? "wide" : ""}">${wsField(f, WS.values[f.key])}</div>`).join("") + "</div></details>").join("");
+  $("#ws-form").oninput = () => { clearTimeout(wsTimer); wsTimer = setTimeout(wsPreview, 350); };
+  $("#ws-filecount").textContent = WS.stale ? "Research changed since your last upload." : "";
+  await wsPreview();
+  wsChecks();
+  renderPrompts();
+}
+$$("#ws-pv button").forEach(b => b.onclick = () => { wsPv = b.dataset.pv; wsShow(); });
+const wsSave = async () => { await busy("Saving…", () => api("/api/workspace/save", { values: wsValues() })); toast("Saved", "good"); };
+$("#ws-save").onclick = wsSave;
+$("#ws-reset").onclick = async () => {
+  if (!await ask(`<h3 style="margin-top:0">Reset the workspace settings?</h3><p>Every field goes back to its default and <code>workspace.yml</code> is removed.</p>`, [["Cancel", false], ["Reset", true, "primary"]])) return;
+  await busy("Resetting…", () => api("/api/workspace/reset", {})); renderWorkspace();
+};
+$("#ws-instr").onclick = async () => {
+  await wsSave();
+  const r = await busy("Copying…", () => api("/api/workspace/instructions", {}));
+  if (r.chars <= r.limit) wsMark("instructions");
+  toast(r.chars > r.limit ? `Copied, but it's ${r.chars} characters: ChatGPT allows ${r.limit}. Shorten it first.` : `Instructions copied (${r.chars.toLocaleString()} characters). Paste them into the Project's instructions.`, r.chars > r.limit ? "bad" : "good", 7000);
+};
+async function wsBuild(reveal) {
+  await wsSave();
+  const r = await busy("Building the Project files…", () => api("/api/workspace/files", { reveal }));
+  $("#ws-filelist").innerHTML = r.files.map(f => `<li><code>${esc(f.name)}</code> <span class="muted">${(f.bytes / 1024).toFixed(0)} KB${f.about ? " · " + esc(f.about) : ""}</span></li>`).join("");
+  $("#ws-filecount").textContent = `${r.files.length} files, ready in ${r.folder}`;
+  return r;
+}
+$("#ws-files").onclick = () => wsBuild(true).then(() => toast("Files built. Upload all of them to the Project's files.", "good", 6000));
+$("#ws-finder").onclick = () => api("/api/open", { path: "dist/chatgpt-project-files" });
+$("#ws-zip").onclick = async () => {
+  await wsBuild(false);
+  const a = document.createElement("a"); a.href = "/api/workspace/files.zip"; a.download = "chatgpt-project-files.zip"; document.body.append(a); a.click(); a.remove();
+  toast("Downloaded chatgpt-project-files.zip. Unzip it, then upload the files to the Project.", "good", 6000);
+};
+function wsMark(step) { const d = store.get("wsDone", {}); d[step] = Date.now(); store.set("wsDone", d); wsChecks(); }
+function wsChecks() {
+  const d = store.get("wsDone", {});
+  const done = { project: d.project, instructions: d.instructions, files: WS && !WS.stale && d.files, initial: d.initial };
+  $$("#ws-check > li").forEach((li, i) => { const ok = !!done[li.dataset.ws]; li.classList.toggle("done", ok); li.querySelector(".tick").textContent = ok ? "✓" : i + 1; });
+}
+$("#ws-project").onclick = () => wsMark("project");
+$("#ws-uploaded").onclick = async () => { await api("/api/workspace/uploaded", {}); wsMark("files"); toast("Noted. The memory warning clears until research changes.", "good"); WS.stale = false; wsChecks(); load(true); };
+$("#ws-initial").onclick = async () => {
+  await wsSave();
+  const r = await busy("Copying…", () => api("/api/workspace/initial", {}));
+  wsMark("initial");
+  toast(`Initial prompt copied (${r.words} words). Start a new chat in the Project, paste and send.`, "good", 7000);
+};
+
+// ---------------------------------------------------------------- chapter view
+function renderChapter() {
+  const c = D; if (!c) return;
+  const stageIdx = STAGES.findIndex(s => s[0] === c.stage);
+  const stepper = STAGES.map(([k, label], i) => {
+    const st = i < stageIdx || c.code === "advance" ? "done" : i === stageIdx ? "now" : "";
+    return `<li class="${st}" ${st === "now" ? 'aria-current="step"' : ""}><span class="dot" aria-hidden="true">${st === "done" ? "✓" : i + 1}</span>${label}<span class="pg-visually-hidden">${st === "done" ? " (done)" : st === "now" ? " (current)" : ""}</span></li>`;
+  }).join("");
+  const serious = c.problems.filter(p => !p.startsWith("(Minor)")), minor = c.problems.filter(p => p.startsWith("(Minor)"));
+  const why = {
+    research: "Start here: copy the research prompt into a NEW ChatGPT chat. ChatGPT searches the web and lists sources.",
+    saveresearch: "Research prompt copied. When ChatGPT finishes, download its zip (it lands in Downloads), then import it here. No zip? Copy the reply and save it instead.",
+    write: c.needsResearch === false && !c.research ? "This section needs no research step. Copy its writing prompt into a NEW chat in your ChatGPT project." : "Research is saved (or skipped). Copy the writing prompt into the SAME ChatGPT chat.",
+    save: c.version ? "Waiting for ChatGPT's revised reply. Copy it in ChatGPT, then save it." : "Prompt copied. When ChatGPT finishes, copy its reply with the copy button and save it.",
+    fix: "The latest draft has problems. Get a complete, correct reply from ChatGPT and save it as the next version.",
+    claude: `Draft v${c.version} is saved. Ask Claude to check it.`,
+    revise: "Claude asked for changes. Copy the revision prompt into the same ChatGPT chat.",
+    approve: `Claude says draft v${c.version} is ready. Approve it into the book.`,
+    advance: "This chapter is approved. On to the next one.",
+  }[c.code];
+  const nextBtn = c.code === "save" || c.code === "fix" ? "Save reply from clipboard" : c.code === "saveresearch" ? "Import research zip from Downloads" : c.label.replace(/ \(.*\)$/, "");
+  const vcount = c.versions.length;
+
+  $("#v-chapter").innerHTML = `
+    <div class="ch-head">
+      <button class="ghost icon-only" id="prev" title="Previous chapter (K)" aria-label="Previous chapter"></button>
+      <div class="grow">
+        <h2>${esc(chName(c))}</h2>
+        <div class="sub">${esc(partLabel(c))} · ${esc(c.status)}${c.version ? ` · draft v${c.version} · ${c.words.toLocaleString()} words` : ""}</div>
+      </div>
+      <button class="ghost sm" id="copyname" title="Copy this chapter's ChatGPT chat name">Copy chat name</button>
+      <button class="ghost icon-only" id="next" title="Next chapter (J)" aria-label="Next chapter"></button>
+    </div>
+    <ol class="steps" aria-label="Chapter progress">${stepper}</ol>
+    <div class="card next">
+      <div class="why grow"><div class="small muted">Next step</div><div>${esc(why)}</div></div>
+      <div class="side"><button class="primary big" id="nextstep" title="Shortcut: N">${esc(nextBtn)}</button>
+        <button class="linkbtn" id="guide-me">Guide me</button></div>
+      ${lastHelp ? `<ol class="help" style="flex-basis:100%">${lastHelp.map(h => `<li>${esc(h)}</li>`).join("")}</ol>` : ""}
+    </div>
+    ${serious.length ? `<div class="card issues"><b>⚠ Problems with draft v${c.version}</b><ul>${serious.map(p => `<li>${esc(p)}</li>`).join("")}</ul>
+       <p class="small" style="margin:8px 0 0">Fix in the ChatGPT chat named <b>${esc(chName(c))}</b> (type “continue” if it was cut off), copy the full reply, then save it. It becomes the next version.</p></div>` : ""}
+    ${minor.length ? `<div class="card minor small">${minor.map(esc).join("<br>")}</div>` : ""}
+    <div class="actions" aria-label="Other actions">
+      <div class="grp" role="group" aria-label="Research"><span class="lbl">Research</span>
+        <button id="a-research" title="Copy the research prompt">Copy prompt</button><button class="z" data-zip="research" title="Copy the same prompt and download a ZIP of reference files to attach (optional)">+ ZIP</button>
+        <button id="a-skip" ${c.research || c.version || c.needsResearch === false ? "disabled" : ""} title="${c.research ? "Research is already saved" : c.version ? "There's already a draft" : c.needsResearch === false ? "This section has no research step" : "Write without a research step"}">Skip</button></div>
+      <div class="grp" role="group" aria-label="Writing"><span class="lbl">Writing</span>
+        <button id="a-write" title="Copy the writing prompt">Copy prompt</button><button class="z" data-zip="write" title="Copy the same prompt and download a ZIP of reference files to attach (optional)">+ ZIP</button></div>
+      <div class="grp" role="group" aria-label="Review"><span class="lbl">Review</span>
+        <button id="a-claude" ${c.version ? "" : "disabled"} title="${c.version ? "Copy “Check chapter …” for Claude Code" : "Save a draft first"}">Check message</button>
+        <button id="a-revise" ${c.versions.some(v => v.check) ? "" : "disabled"} title="${c.versions.some(v => v.check) ? "Copy the revision prompt" : "Needs Claude's check first"}">Revision prompt</button><button class="z" data-zip="revise" ${c.versions.some(v => v.check) ? "" : "disabled"} title="Copy the same prompt and download a ZIP of reference files to attach (optional)">+ ZIP</button></div>
+      <span class="spacer"></span>
+      <button id="a-approve" ${c.version ? "" : "disabled"} title="${c.version ? "Approve the latest draft into the book (asks first)" : "Save a draft first"}">Approve latest draft…</button>
+    </div>
+    <div class="card">
+      <div class="tabs" id="tabs">
+        ${[["save", "Save reply"], ["research", "Research"], ["draft", `Draft <span class="count">${vcount ? "v" + c.version : ""}</span>`], ["notes", "Editor notes"], ["check", "Claude check"],
+           ["book", "In the book"], ["files", "Files"], ["about", "About"]].map(([k, l]) => `<button data-tab="${k}" class="${tab === k ? "on" : ""}">${l}</button>`).join("")}
+      </div>
+      <div id="tabbody"></div>
+    </div>`;
+  $("#prev").onclick = () => go(neighbor(c, -1));
+  $("#next").onclick = () => go(neighbor(c, 1));
+  $("#copyname").onclick = () => copyText(chName(c), "Copied the chat name");
+  $("#nextstep").onclick = nextStep;
+  $("#guide-me").onclick = () => tourStart(TOUR_STEP_FOR[c.code] ?? 2);
+  $("#a-write").onclick = () => doStep("write");
+  $("#a-research").onclick = () => doStep("research");
+  $("#a-skip").onclick = async () => { if (await ask("<h3 style='margin-top:0'>Skip research?</h3><p>The writing prompt will use only the project's existing research. Fine for simple chapters.</p>", [["Cancel", false], ["Skip", true, "primary"]])) doStep("skipresearch"); };
+  $("#a-claude").onclick = () => doStep("claude");
+  $("#a-revise").onclick = () => doStep("revise");
+  $$("[data-zip]").forEach(b => b.onclick = async () => {
+    const r = await promptPack(b.dataset.zip, c.n, true);
+    if (r?.ok) { lastHelp = [`The prompt is on your clipboard and ${r.pack.zipName} is in Downloads.`,
+      `In ChatGPT, open the chat “${chName(c)}” (or start a new one), attach the ZIP, paste (⌘V) and send.`,
+      "The ZIP is optional extra background: the prompt works on its own too."]; await load(true); }
+  });
+  $("#a-approve").onclick = () => doStep("approve");
+  $$("#tabs button").forEach(b => b.onclick = () => { tab = b.dataset.tab; store.set("tab", tab); renderChapter(); });
+  renderTab();
+}
+
+async function renderTab() {
+  const c = D, body = $("#tabbody");
+  const latest = c.versions[c.versions.length - 1];
+  if (tab === "save") {
+    const kind = saveKind();
+    body.innerHTML = `
+      <div class="row" style="margin-bottom:10px"><span class="small muted">This reply is</span>
+        <span class="seg" id="skind"><button data-k="research" class="${kind === "research" ? "on" : ""}">Research</button><button data-k="draft" class="${kind === "draft" ? "on" : ""}">Chapter draft</button></span></div>
+      ${kind === "research" ? `<div class="zipbox"><div class="row">
+        <button class="primary" id="zipdl">Import ${esc(c.zip || `ch${pad2(c.n)}-research.zip`)} from Downloads</button>
+        <label class="small"><input type="file" id="zippick" accept=".zip" class="hidden"><a href="#" id="zippicklink">or choose a zip…</a></label>
+        <span class="small muted">You can also drag the zip onto this page.</span></div></div>
+        <div class="small muted" style="margin:0 0 6px">No zip (ChatGPT couldn't make files)? Copy its reply instead:</div>` : ""}
+      <div class="row">
+        <button class="${kind === "research" ? "" : "primary"}" id="fromclip">Get ChatGPT's reply from the clipboard <kbd style="background:transparent;color:inherit">V</kbd></button>
+        <span class="muted small">or paste it below</span>
+      </div>
+      <textarea id="reply" rows="8" style="margin-top:10px" placeholder="Paste ChatGPT's whole reply here (⌘V)…">${esc(pending?.raw || "")}</textarea>
+      <div id="pv"></div>`;
+    $("#fromclip").onclick = () => previewReply(true);
+    if (kind === "research") {
+      $("#zipdl").onclick = () => importZip(c.n, { downloads: true });
+      $("#zippicklink").onclick = e => { e.preventDefault(); $("#zippick").click(); };
+      $("#zippick").onchange = e => e.target.files[0] && importZipFile(c.n, e.target.files[0]);
+    }
+    $$("#skind button").forEach(b => b.onclick = () => { kindOverride = { n: c.n, k: b.dataset.k }; pending = null; renderTab(); });
+    let t; $("#reply").oninput = () => { clearTimeout(t); t = setTimeout(() => previewReply(false), 300); };
+    if (pending) showPreview();
+  } else if (["draft", "notes", "check"].includes(tab)) {
+    if (!latest) { body.innerHTML = `<p class="muted">No drafts saved yet.</p>`; return; }
+    const sel = store.get("ver-" + c.n, latest.v);
+    const ver = c.versions.find(v => v.v === sel) || latest;
+    const path = tab === "draft" ? ver.chapter : tab === "notes" ? ver.notes : ver.check;
+    const verdict = ver.verdict ? `<span class="pill ${ver.verdict === "ready" ? "p-approve" : "p-revise"}">${ver.verdict === "ready" ? "Ready to approve" : "Needs revision"}</span>` : "";
+    body.innerHTML = `
+      <div class="row" style="margin-bottom:10px">
+        <select id="ver">${c.versions.map(v => `<option value="${v.v}" ${v.v === ver.v ? "selected" : ""}>Draft v${v.v}${v.verdict ? " · checked" : ""}</option>`).join("")}</select>
+        ${tab === "check" ? verdict : ""}
+        <span class="grow"></span>
+        ${path ? `<span class="seg" id="dmode"><button data-m="rendered" class="${docMode === "rendered" ? "on" : ""}">Reading</button><button data-m="raw" class="${docMode === "raw" ? "on" : ""}">Markdown</button></span>
+        <button id="dcopy">Copy</button><button id="dopen">Open</button>` : ""}
+      </div><div id="docbox"></div>`;
+    $("#ver").onchange = e => { store.set("ver-" + c.n, +e.target.value); renderTab(); };
+    if (!path) { $("#docbox").innerHTML = `<p class="muted">${tab === "notes" ? "No editor notes for this version (ChatGPT left out the === EDITOR NOTES === line)." : "Claude hasn't checked this version yet. Use “Copy check message for Claude”."}</p>`; return; }
+    $$("#dmode button").forEach(b => b.onclick = () => { docMode = b.dataset.m; store.set("docMode", docMode); renderTab(); });
+    $("#dcopy").onclick = () => api("/api/copy", { path }).then(() => toast("Copied"));
+    $("#dopen").onclick = () => api("/api/open", { path });
+    showDoc(path);
+  } else if (tab === "research") {
+    const libBox = `<div class="rl-chbox" id="rl-chbox"><span class="muted small">Research Library…</span></div>`;
+    api(`/api/research/sources?chapter=${c.n}`).then(l => {
+      const box = $("#rl-chbox"); if (!box) return;
+      box.innerHTML = `${ic("library")}<span class="grow small"><b>Research Library:</b> ${l.sources.length} source(s) for this chapter${l.sources.length ? `: ${l.sources.slice(0, 4).map(s => esc(s.title)).join(", ")}${l.sources.length > 4 ? "…" : ""}` : ""}</span>
+        <button class="sm" id="rl-chopen">Open library</button>`;
+      $("#rl-chopen").onclick = () => { store.set("rlChapter", c.n); bbGo("research", "sources", "p"); };
+    }).catch(() => {});
+    if (!c.research) { body.innerHTML = libBox + `<p class="muted">No research saved yet. Use “Copy research prompt”, then save ChatGPT's reply on the Save reply tab.</p>`; return; }
+    body.innerHTML = libBox + `<div class="row" style="margin-bottom:10px"><span class="muted small grow">${esc(c.research)} · sources not yet verified by Claude</span>
+      <span class="seg" id="dmode"><button data-m="rendered" class="${docMode === "rendered" ? "on" : ""}">Reading</button><button data-m="raw" class="${docMode === "raw" ? "on" : ""}">Markdown</button></span></div><div id="docbox"></div>`;
+    $$("#dmode button").forEach(b => b.onclick = () => { docMode = b.dataset.m; store.set("docMode", docMode); renderTab(); });
+    showDoc(c.research);
+  } else if (tab === "book") {
+    body.innerHTML = `<div class="row" style="margin-bottom:10px"><span class="muted small grow">${esc(c.book)} · status ${esc(c.status)}</span>
+      <span class="seg" id="dmode"><button data-m="rendered" class="${docMode === "rendered" ? "on" : ""}">Reading</button><button data-m="raw" class="${docMode === "raw" ? "on" : ""}">Markdown</button></span></div><div id="docbox"></div>`;
+    $$("#dmode button").forEach(b => b.onclick = () => { docMode = b.dataset.m; store.set("docMode", docMode); renderTab(); });
+    showDoc(c.book);
+  } else if (tab === "files") {
+    const files = [["Book file", c.book], ["Brief", c.brief], ...c.versions.flatMap(v => [[`Draft v${v.v}`, v.chapter], [`Notes v${v.v}`, v.notes], [`Check v${v.v}`, v.check]]),
+                   ...c.prompts.map(p => ["Prompt", p]), ...c.reviews.map(p => ["Review", p])].filter(f => f[1]);
+    body.innerHTML = `<ul class="files">${files.map(([k, p]) => `<li><span class="muted small" style="width:80px">${k}</span><code>${esc(p)}</code>
+      <button data-copy="${esc(p)}">Copy</button><button data-open="${esc(p)}">Open</button><button data-reveal="${esc(p)}">Show in Finder</button></li>`).join("")}</ul>`;
+    body.querySelectorAll("[data-copy]").forEach(b => b.onclick = () => api("/api/copy", { path: b.dataset.copy }).then(() => toast("Copied")));
+    body.querySelectorAll("[data-open]").forEach(b => b.onclick = () => api("/api/open", { path: b.dataset.open }));
+    body.querySelectorAll("[data-reveal]").forEach(b => b.onclick = () => api("/api/open", { path: b.dataset.reveal, reveal: true }));
+  } else if (tab === "about") {
+    const boxes = { P: "Perspective boxes", N: "Reader-group boxes", D: "Partner boxes" };
+    body.innerHTML = `
+      <p><b>Covers:</b> ${esc(c.desc)}</p>
+      <p><b>Boxes likely needed:</b> ${c.markers.length ? c.markers.map(m => boxes[m]).join("; ") : "probably none"}</p>
+      ${c.partQuestion ? `<p><b>Part ${c.part} asks:</b> “${esc(c.partQuestion)}”<br><span class="muted">Hands the reader on with: ${esc(c.partHandoff)}</span></p>` : `<p class="muted">Not a chapter: this section has its own purpose-specific prompt (length, content and format).</p>`}
+      <p><b>ChatGPT chat name:</b> <code>${esc(chName(c))}</code></p>`;
+  }
+}
+
+async function showDoc(path) {
+  const box = $("#docbox"); box.innerHTML = `<p class="muted">Loading…</p>`;
+  try {
+    if (docMode === "raw") {
+      const { text } = await api("/api/file?path=" + encodeURIComponent(path));
+      box.innerHTML = `<pre class="raw">${highlight(esc(text))}</pre>`;
+    } else {
+      const { html } = await api("/api/render?path=" + encodeURIComponent(path));
+      box.innerHTML = `<div class="doc">${highlightHtml(html)}</div>`;
+    }
+  } catch (e) { box.innerHTML = `<p class="muted">${esc(e.message)}</p>`; }
+}
+const highlight = s => s.replace(/\[NEEDS SOURCE\]/g, '<mark class="need">[NEEDS SOURCE]</mark>').replace(/\[@[^\]]+\]/g, m => `<mark class="cite">${m}</mark>`);
+const highlightHtml = s => s.replace(/\[NEEDS SOURCE\]/g, '<mark class="need">[NEEDS SOURCE]</mark>').replace(/\[@[^\]<]+\]/g, m => `<mark class="cite">${m}</mark>`);
+
+// ---------------------------------------------------------------- steps
+async function copyText(text, msg) { await api("/api/copy", { text }); toast(msg || "Copied"); }
+
+async function doStep(code, ch = D) {
+  if (code === "approve") {
+    const ok = await ask(`<h3 style="margin-top:0">Approve ${esc(chName(ch))}?</h3><p>The latest draft (v${ch.version}) goes into the book as approved. The previous book file is kept as a backup.</p>`,
+      [["Cancel", false], ["Approve", true, "primary"]]);
+    if (!ok) return;
+  }
+  const r = await busy("Working…", () => api("/api/step", { n: ch.n, code }));
+  if (!r.ok) { await ask(`<h3 style="margin-top:0">That didn't work</h3><pre class="raw">${esc(r.message)}</pre>`, [["OK", true, "primary"]]); return r; }
+  toast(r.message, "good");
+  lastHelp = r.help || null;
+  if (code === "advance") { await load(); await go(r.current); return r; }
+  await load(true);
+  return r;
+}
+
+async function nextStep() {
+  if (!D) return;
+  if (D.code === "saveresearch") {
+    const r = await importZip(D.n, { downloads: true }, true);
+    if (r && r.ok) return;
+    kindOverride = null; tab = "save"; store.set("tab", "save"); renderChapter();
+    return toast("No zip found in Downloads. Import it with “choose a zip”, or copy ChatGPT's reply and use the clipboard button.", "bad", 7000);
+  }
+  if (["save", "fix"].includes(D.code)) { kindOverride = null; tab = "save"; store.set("tab", "save"); renderChapter(); return previewReply(true); }
+  return doStep(D.code);
+}
+
+async function previewReply(fromClipboard) {
+  const text = fromClipboard ? undefined : $("#reply")?.value || "";
+  if (!fromClipboard && !text.trim()) { pending = null; $("#pv").innerHTML = ""; return; }
+  const kind = saveKind();
+  const r = await api("/api/preview", fromClipboard ? { n: D.n, clipboard: true, kind } : { n: D.n, text, kind });
+  pending = { ...r, n: D.n, kind };
+  if (fromClipboard && $("#reply")) $("#reply").value = r.raw;
+  showPreview();
+}
+
+function showPreview() {
+  const p = pending; if (!p || p.n !== D.n) return;
+  const box = $("#pv"); if (!box) return;
+  if (p.empty) { box.innerHTML = `<p class="issues card">The clipboard is empty. In ChatGPT, click the copy button under the reply first.</p>`; return; }
+  const serious = p.problems.filter(x => !x.startsWith("(Minor)"));
+  const wrong = p.guess ? byN(p.guess) : null;
+  const isR = p.kind === "research";
+  box.innerHTML = `
+    <div class="preview">
+      <div class="stat ${wrong ? "bad" : "good"}"><span class="small muted">Title</span><b style="font-size:15px">${esc(p.title || "(none)")}</b></div>
+      <div class="stat ${p.words < (isR ? 300 : 2500) ? "bad" : "good"}"><span class="small muted">Words</span><b>${p.words.toLocaleString()}</b></div>
+      <div class="stat ${serious.length ? "bad" : "good"}"><span class="small muted">Problems</span><b>${serious.length}</b></div>
+      ${isR ? `<div class="stat ${p.sources ? "good" : "bad"}"><span class="small muted">Sources</span><b>${p.sources}</b></div>`
+            : `<div class="stat ${p.hasNotes ? "good" : ""}"><span class="small muted">Editor notes</span><b>${p.hasNotes ? "Yes" : "No"}</b></div>`}
+    </div>
+    ${p.duplicate ? `<div class="card issues">This exact text is already saved as <code>${esc(p.duplicate)}</code>. Copy the right ChatGPT reply.</div>` : ""}
+    ${wrong ? `<div class="card issues">This looks like <b>${esc(chName(wrong))}</b>, not ${esc(ref(D))}. <button id="sw">Switch to ${esc(ref(wrong))} and save there</button></div>` : ""}
+    ${serious.length ? `<div class="card issues"><ul>${serious.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+    <details><summary class="small muted">Start of the reply</summary><pre class="raw">${esc(p.start)}</pre></details>
+    <div class="row" style="margin-top:12px">
+      <button class="primary" id="dosave" ${p.duplicate ? "disabled" : ""}>${isR ? `Save as research for ${esc(ref(D))}` : `Save as draft v${D.version + 1} of ${esc(ref(D))}`}${serious.length || wrong ? " anyway" : ""}</button>
+      <label class="small"><input type="checkbox" id="andnext" ${store.get("andnext", false) ? "checked" : ""}> then go to the next chapter</label>
+      <button class="ghost" id="clr">Clear</button>
+    </div>`;
+  $("#dosave").onclick = () => saveReply();
+  $("#andnext").onchange = e => store.set("andnext", e.target.checked);
+  $("#clr").onclick = () => { pending = null; renderTab(); };
+  if (wrong) $("#sw").onclick = async () => { const keep = pending; await go(wrong.n); kindOverride = { n: wrong.n, k: keep.kind }; tab = "save"; renderChapter(); await previewText(keep.raw, keep.kind); };
+}
+async function previewText(raw, kind) { const r = await api("/api/preview", { n: D.n, text: raw, kind }); pending = { ...r, n: D.n, kind, raw }; renderTab(); }
+
+async function saveReply() {
+  const kind = pending.kind;
+  const r = await busy("Saving…", () => api("/api/save", { n: D.n, text: pending.raw, kind }));
+  if (!r.ok) { await ask(`<h3 style="margin-top:0">Not saved</h3><pre class="raw">${esc(r.output)}</pre>`, [["OK", true, "primary"]]); return; }
+  pending = null;
+  if (kind === "research") toast("Research saved. Next: copy the writing prompt into the same chat.", "good", 5000);
+  else if (r.problems.length) toast("Saved, but it has problems: see the red box", "bad", 6000); else toast("Saved. Next: ask Claude to check it.", "good");
+  kindOverride = null;
+  lastHelp = null;
+  const n = D.n;
+  await load(true);
+  if ($("#andnext")?.checked || store.get("andnext", false)) await go(n + 1);
+}
+
+// ---------------------------------------------------------------- research zips + ChatGPT memory
+async function importZip(n, payload, quietNotFound = false) {
+  const r = await busy("Importing the research zip…", () => api("/api/import-zip", { n, ...payload }));
+  if (!r.ok) {
+    if (r.notFound && quietNotFound) return r;
+    await ask(`<h3 style="margin-top:0">Not imported</h3><pre class="raw">${esc(r.output)}</pre>`, [["OK", true, "primary"]]);
+    return r;
+  }
+  toast(`Imported ${r.file} into chapter ${n}. Next: writing prompt, same chat.`, "good", 6000);
+  lastHelp = ["Research imported (and added to the ChatGPT memory files).",
+              "Next: copy the writing prompt and paste it into the SAME chat.",
+              "Every few chapters, click “Update ChatGPT memory” at the top and upload the files to the Project."];
+  pending = null;
+  await load(true);
+  return r;
+}
+function importZipFile(n, file) {
+  if (!/\.zip$/i.test(file.name)) return toast("That isn't a .zip file", "bad");
+  const fr = new FileReader();
+  fr.onload = () => importZip(n, { data: fr.result.split(",")[1], name: file.name });
+  fr.readAsDataURL(file);
+}
+
+// drag a zip anywhere onto the page
+let dragDepth = 0;
+document.addEventListener("dragenter", e => { if ([...(e.dataTransfer?.types || [])].includes("Files")) { dragDepth++; document.body.classList.add("dragging"); } });
+document.addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth = 0; document.body.classList.remove("dragging"); } });
+document.addEventListener("dragover", e => e.preventDefault());
+document.addEventListener("drop", e => {
+  e.preventDefault(); dragDepth = 0; document.body.classList.remove("dragging");
+  const f = e.dataTransfer?.files?.[0]; if (!f) return;
+  const m = f.name.match(/^ch[ _-]?0*(\d+)/i);
+  const n = m ? +m[1] : D.n;
+  if (m && n !== D.n) toast(`The file name says chapter ${n}; importing there.`);
+  importZipFile(n, f);
+});
+
+// ---------------------------------------------------------------- batch
+// Batch works on numbered chapters only (1…last). Stored ranges from older versions (for example a
+// front-matter section's internal number, 101) are replaced by a sensible default.
+function batchDefault() {
+  const last = lastNum(), first = S.chapters.find(c => c.n <= last && c.code !== "advance")?.n ?? 1;
+  const start = S.current >= 1 && S.current <= last ? S.current : first;
+  return [start, Math.min(start + 9, last)];
+}
+function batchRange() {
+  const last = lastNum(), ok = n => Number.isInteger(n) && n >= 1 && n <= last;
+  let from = store.get("bfrom", null), to = store.get("bto", null);
+  if (!ok(from) || !ok(to) || from > to) [from, to] = batchDefault();
+  return [from, to];
+}
+function batchInputError() {
+  const last = lastNum(), f = +$("#bfrom").value, t = +$("#bto").value;
+  if (!Number.isInteger(f) || !Number.isInteger(t)) return "Enter whole chapter numbers.";
+  if (f < 1 || t > last || f > last || t < 1) return `Chapters run from 1 to ${last}.`;
+  if (f > t) return "The first chapter must come before the last.";
+  return "";
+}
+const BMODES = {
+  rcopy: { order: 1, label: "Copy research prompt", step: "research", next: "rsave",
+           how: c => `Copies its research prompt. In ChatGPT: start a NEW chat (in your Project if you use one; web search on), paste, send. The chat should be named “${esc(chName(c))}”.` },
+  rsave: { order: 2, label: "Import research", kind: "research", zip: true, next: "copy",
+           how: c => `In ChatGPT, open “${esc(chName(c))}” and download its zip (${esc(c.zip)}). Then click Import. No zip? Copy the reply instead; the button falls back to the clipboard.` },
+  copy:  { order: 3, label: "Copy writing prompt", step: "write", next: "save",
+           how: c => `Copies its writing prompt. Paste it into the SAME chat, “${esc(chName(c))}”, and send.` },
+  save:  { order: 4, label: "Save draft", kind: "draft", next: null,
+           how: c => `In ChatGPT, open “${esc(chName(c))}”, click the copy button under the chapter reply, then click Save.` },
+};
+const bmode = () => BMODES[store.get("bmode", "rcopy")] ? store.get("bmode", "rcopy") : "rcopy";
+function renderBatch() {
+  const [from, to] = batchRange();
+  const mode = bmode(), M = BMODES[mode];
+  let ptr = store.get("bptr-" + mode, from);
+  if (ptr < from || ptr > to + 1) ptr = from;
+  const last = lastNum();
+  if (!bErr) { $("#bfrom").value = from; $("#bto").value = to; }
+  $("#bfrom").max = $("#bto").max = last;
+  $$("#bmode button").forEach(b => b.classList.toggle("on", b.dataset.m === mode));
+  const rows = S.chapters.filter(c => c.n >= from && c.n <= to);
+  const done = ptr > to;
+  const cur = byN(ptr);
+  const claudeList = rows.filter(c => c.code === "claude");
+  $("#bwhy").innerHTML = done
+    ? `<b>Step ${M.order} finished for chapters ${from}–${to}.</b> <span class="muted">${M.next ? `Next: step ${BMODES[M.next].order}, ${BMODES[M.next].label.toLowerCase()}. Wait until ChatGPT has finished the chats.` : "Next: ask Claude to check these drafts."}</span>`
+    : `<div class="small muted">Step ${M.order} · next up</div><b>${esc(chName(cur))}</b><div class="small muted">${M.how(cur)}</div>${cur.code === "advance" ? `<div class="muted-note" style="color:var(--warn)">This chapter is already approved, so you can skip it: press “Start here” on a later row.</div>` : ""}`;
+  const pad = String(ptr).padStart(2, "0");
+  $("#bgo").textContent = done ? (M.next ? `Go to step ${BMODES[M.next].order}` : claudeList.length ? "Copy check request for Claude" : "Done")
+    : M.step ? `${M.label} for Ch ${pad}` : M.zip ? `Import research for Ch ${pad}` : `${M.label} from clipboard to Ch ${pad}`;
+  $("#brangeerr").textContent = bErr ? `${bErr} Still using ${from}–${to}.` : "";
+  $("#bnext10").disabled = to >= last; $("#bnext10").title = to >= last ? "This range already ends at the last chapter" : "The next ten chapters";
+  $("#bgo").disabled = done && !M.next && !claudeList.length;
+  $("#bgo").title = $("#bgo").disabled ? "Nothing left to do in this step for this range" : "Shortcut: N";
+  const doneCount = Math.min(rows.length, Math.max(0, rows.filter(r => r.n < ptr).length));
+  $("#bprog").innerHTML = `<span class="miniprog" style="display:inline-block;width:160px;vertical-align:middle"><span style="width:${rows.length ? doneCount / rows.length * 100 : 0}%"></span></span> ${doneCount} of ${rows.length} done in step ${M.order}`;
+  $("#btable").innerHTML = rows.map(c => `<tr class="${c.n === ptr ? "ptr" : ""}">
+      <td style="width:34px" class="muted">${num(c)}</td>
+      <td><a href="#" data-go="${c.n}">${esc(c.title)}</a></td>
+      <td>${c.serious ? pill("fix") : pill(c.code)}</td>
+      <td class="small muted hide-narrow">${c.version ? `v${c.version} · ${c.words.toLocaleString()} words` : ""}</td>
+      <td style="text-align:right"><button data-ptr="${c.n}" class="ghost small" title="Make this the next row">Start here</button></td></tr>`).join("");
+  $$("#btable [data-go]").forEach(a => a.onclick = e => { e.preventDefault(); go(+a.dataset.go); setView("chapter"); });
+  $$("#btable [data-ptr]").forEach(b => b.onclick = () => { store.set("bptr-" + mode, +b.dataset.ptr); renderBatch(); });
+}
+async function batchGo() {
+  const [from, to] = batchRange();
+  const mode = bmode(), M = BMODES[mode];
+  let ptr = store.get("bptr-" + mode, from);
+  if (ptr < from || ptr > to + 1) ptr = from;
+  const res = $("#bresult");
+  if (ptr > to) {
+    if (M.next) { store.set("bmode", M.next); store.set("bptr-" + M.next, from); return renderBatch(); }
+    const list = S.chapters.filter(c => c.code === "claude" && c.n >= from && c.n <= to);
+    const msg = "Check these drafts: " + list.map(c => `${ref(c)} draft v${c.version}`).join(", ") + ".";
+    await copyText(msg, "Copied the check request: paste it into Claude Code"); return;
+  }
+  const ch = byN(ptr);
+  if (M.step) {
+    const zip = $("#bzip").checked;
+    store.set("bzip", zip);
+    const r = zip ? await promptPack(M.step === "research" ? "research" : "write", ptr, true)
+                  : await busy(`Copying the prompt for ch. ${ptr}…`, () => api("/api/step", { n: ptr, code: M.step }));
+    if (!r.ok) return toast(r.message, "bad", 6000);
+    if (!zip) toast(`Copied: ${chName(ch)}`, "good");
+    res.classList.remove("hidden");
+    res.innerHTML = `<b>Copied the ${M.step === "research" ? "research" : "writing"} prompt for ${esc(chName(ch))}${zip ? ` and downloaded ${esc(r.pack.zipName)} (attach it before pasting)` : ""}.</b> ${M.how(ch)}`;
+    store.set("bptr-" + mode, ptr + 1);
+  } else {
+    if (M.zip) {
+      const z = await importZip(ptr, { downloads: true }, true);
+      if (z.ok) {
+        res.classList.remove("hidden");
+        res.innerHTML = `<b>Imported ${esc(z.file)} into ${esc(chName(ch))}.</b><pre class="raw small">${esc(z.output)}</pre>`;
+        store.set("bptr-" + mode, ptr + 1); return renderBatch();
+      }
+      if (!z.notFound) return;
+      toast(`No ch${pad2(ptr)} zip in Downloads; trying the clipboard instead.`);
+    }
+    const p = await busy("Reading the clipboard…", () => api("/api/preview", { n: ptr, clipboard: true, kind: M.kind }));
+    if (p.empty) return toast("The clipboard is empty. Copy the reply in ChatGPT first.", "bad");
+    const serious = p.problems.filter(x => !x.startsWith("(Minor)"));
+    if (p.duplicate) {
+      await ask(`<h3 style="margin-top:0">Already saved</h3><p>That reply is already saved as <code>${esc(p.duplicate)}</code>. Copy the reply from the chat named <b>${esc(chName(ch))}</b>.</p>`, [["OK", true, "primary"]]);
+      return;
+    }
+    if (p.guess || serious.length) {
+      const g = p.guess ? byN(p.guess) : null;
+      const pick = await ask(`<h3 style="margin-top:0">Check this before saving to ${esc(chName(ch))}</h3>
+        ${g ? `<p class="issues card">This looks like <b>${esc(chName(g))}</b>. It starts “${esc(p.title)}”.</p>` : ""}
+        ${serious.length ? `<ul>${serious.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}`,
+        [["Cancel", null], ["Skip this chapter", "skip"], ["Save anyway", "save", "primary"]]);
+      if (pick === "skip") { store.set("bptr-" + mode, ptr + 1); return load(true); }
+      if (pick !== "save") return;
+    }
+    const r = await busy("Saving…", () => api("/api/save", { n: ptr, text: p.raw, kind: M.kind }));
+    if (!r.ok) { await ask(`<h3 style="margin-top:0">Not saved</h3><pre class="raw">${esc(r.output)}</pre>`, [["OK", true, "primary"]]); return; }
+    toast(`Saved ${chName(ch)} · ${p.words.toLocaleString()} words`, r.problems.length ? "bad" : "good");
+    res.classList.remove("hidden");
+    res.innerHTML = `<b>Saved ${M.kind === "research" ? "research" : "draft"} for ${esc(chName(ch))}</b>${r.problems.length ? ` with problems: <ul>${r.problems.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "."}`;
+    store.set("bptr-" + mode, ptr + 1);
+  }
+  await load(true);
+}
+
+// ---------------------------------------------------------------- book (overview)
+const BOOK_FORM = [
+  ["title", "Title", "", null],
+  ["subtitle", "Subtitle", "", null],
+  ["author", "Author", "Pen names of the co-authors. Replace “ChatGPT” with its chosen pen name.", null],
+  ["rights", "Rights line", "Copyright and license, shown on the copyright page.", null],
+  ["date", "Edition / date", "For example Draft, First edition, or 2026.", null],
+  ["papersize", "PDF page size", "us-trade is 6×9 in, the usual US paperback.", ["us-trade", "us-letter", "a5", "jis-b6", "iso-b5"]],
+  ["fontsize", "PDF font size", "", ["10pt", "10.5pt", "11pt", "11.5pt", "12pt"]],
+];
+function renderOverview() {
+  const c = S.chapters, count = k => c.filter(x => x.code === k).length;
+  const groups = [["advance", "Approved"], ["approve", "Ready to approve"], ["revise", "To revise"], ["claude", "Waiting on Claude"],
+                  ["save", "Waiting for draft"], ["write", "Ready to write"], ["saveresearch", "Waiting for research"], ["research", "Not started"]];
+  const health = c.flatMap(x => x.problems.map(p => ({ n: x.n, p })));
+  const serious = health.filter(h => !h.p.startsWith("(Minor)")), minor = health.filter(h => h.p.startsWith("(Minor)"));
+  const words = c.reduce((a, x) => a + x.words, 0), tot = c.length, appr = count("advance");
+  const bar = groups.filter(([k]) => count(k)).map(([k, l]) => `<span title="${l}: ${count(k)}" style="width:${count(k) / tot * 100}%;background:${STAGE_COLOR[k]}"></span>`).join("");
+  const chips = groups.filter(([k]) => count(k)).map(([k, l]) => `<button class="chip" data-filter="${k}" title="Show these in the sidebar"><i style="background:${STAGE_COLOR[k]}"></i>${l} <b>${count(k)}</b></button>`).join("");
+  const mine = c.filter(x => ME.includes(x.code) && x.code !== "advance" && x.code !== "research");
+  const claude = c.filter(x => x.code === "claude");
+  const li = (x, extra) => `<li><span class="n">${esc(num(x))}</span><a href="#" data-go="${x.n}">${esc(x.title)}</a><span class="grow"></span>${extra}</li>`;
+  const list = (xs, extra, max = 8) => `<ul class="todo">${xs.slice(0, max).map(x => li(x, extra(x))).join("")}</ul>${xs.length > max ? `<p class="muted-note">and ${xs.length - max} more; use the sidebar filter.</p>` : ""}`;
+  const parts = [...new Set(c.map(x => x.part))].map(pn => {
+    const xs = c.filter(x => x.part === pn), a = xs.filter(x => x.code === "advance").length;
+    return `<span>${esc(partLabel(xs[0]))}</span><span class="miniprog" style="max-width:none"><span style="width:${a / xs.length * 100}%;background:var(--good)"></span></span><span class="muted-note">${a}/${xs.length}</span>`;
+  }).join("");
+  const resume = tourSaved();
+  $("#v-overview").innerHTML = `
+    <div class="card">
+      <div class="sec-h"><h3>${esc(S.book?.title || "The book")}</h3>
+        ${resume ? `<button id="ov-resume">Resume tutorial (step ${resume + 1})</button>` : ""}<button class="primary" id="ov-tour">Start guided tutorial</button></div>
+      <p style="margin:0"><b>${appr} of ${tot}</b> approved · ${words.toLocaleString()} words in drafts${serious.length ? ` · <span style="color:var(--bad)">${serious.length} problem${serious.length === 1 ? "" : "s"}</span>` : ""}</p>
+      <div class="sumbar" role="img" aria-label="${groups.filter(([k]) => count(k)).map(([k, l]) => `${l} ${count(k)}`).join(", ")}">${bar}</div>
+      <div class="chips">${chips}</div>
+    </div>
+    ${S.missing.length || serious.length ? `<div class="card"><h3>Needs fixing</h3>
+      ${S.missing.length ? `<p class="alert bad">Project files missing: ${S.missing.map(esc).join(", ")}</p>` : ""}
+      ${serious.length ? `<ul class="todo">${serious.map(h => li(byN(h.n), `<span class="small" style="color:var(--bad)">${esc(h.p)}</span>`)).join("")}</ul>` : ""}</div>` : ""}
+    ${mine.length ? `<div class="card"><h3>Waiting on you <span class="small muted">${mine.length}</span></h3>${list(mine, x => pill(x.code))}</div>` : ""}
+    ${claude.length ? `<div class="card"><h3>Waiting on Claude <span class="small muted">${claude.length}</span></h3>${list(claude, x => `<span class="muted-note">draft v${x.version}</span>`)}</div>` : ""}
+    ${!mine.length && !claude.length && !serious.length ? `<div class="card"><p style="margin:0">Nothing is waiting. ${appr === tot ? "Every chapter is approved: build the book or publish the website." : "Start the next chapter from the sidebar."}</p></div>` : ""}
+    ${minor.length ? `<div class="card"><details><summary><b>Minor notes</b> <span class="small muted">${minor.length}</span></summary><ul class="todo">${minor.map(h => li(byN(h.n), `<span class="muted-note">${esc(h.p.replace("(Minor) ", ""))}</span>`)).join("")}</ul></details></div>` : ""}
+    <div class="card"><h3>By part</h3><div class="parts">${parts}</div></div>
+    <div class="card"><h3>Book-wide tools</h3>
+      <div class="row">
+        <button data-to="build">${ic("hammer")}Build the book</button>
+        <button data-to="website">${ic("globe")}Website</button>
+        <button data-to="games">${ic("gamepad-2")}Games</button>
+        <button data-to="git">${ic("git-commit-horizontal")}Save work</button>
+        <button data-to="workspace">${ic("settings")}ChatGPT workspace</button>
+      </div></div>
+    <div class="card"><div class="sec-h"><h3>Book details</h3><button class="primary" id="bk-save">${ic("save")}Save</button></div>
+      <p class="muted-note" style="margin-top:0">Used on the cover page, in every format and on the website. Saved in <code>book.yml</code>; its comments and chapter list aren't touched.</p>
+      <div class="bkform">${BOOK_FORM.map(([k, l, hint, opts]) => `<label for="bk-${k}">${l}</label>${opts
+        ? `<select id="bk-${k}">${opts.map(o => `<option${o === S.book?.[k] ? " selected" : ""}>${o}</option>`).join("")}${opts.includes(S.book?.[k]) ? "" : `<option selected>${esc(S.book?.[k] || "")}</option>`}</select>`
+        : `<input id="bk-${k}" value="${esc(S.book?.[k] || "")}">`}<span class="muted-note">${hint}</span>`).join("")}</div></div>`;
+  $$("#v-overview [data-to]").forEach(b => b.onclick = () => setView(b.dataset.to));
+  $("#bk-save").onclick = async () => {
+    const data = Object.fromEntries(BOOK_FORM.map(([k]) => [k, $(`#bk-${k}`).value]));
+    const r = await api("/api/book/save", data);
+    toast(r.message, r.ok ? "good" : "bad", 5000);
+    if (r.ok && r.book) { S.book = r.book; renderOverview(); }
+  };
+  $$("#v-overview [data-go]").forEach(e => e.onclick = ev => { ev.preventDefault(); go(+e.dataset.go); setView("chapter"); });
+  $$("#v-overview [data-filter]").forEach(e => e.onclick = () => { $("#filter").value = e.dataset.filter; renderList(); if (narrow()) document.body.classList.add("drawer"); else document.body.classList.remove("side-off"); });
+  $("#ov-tour").onclick = () => tourStart(0, true);
+  if ($("#ov-resume")) $("#ov-resume").onclick = () => tourStart(resume);
+}
+
+// ---------------------------------------------------------------- build / git
+const fmtSize = b => b > 1e6 ? (b / 1e6).toFixed(1) + " MB" : Math.round(b / 1e3) + " KB";
+const fmtWhen = s => new Date(s * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+function renderBuild() {
+  const info = (S.outputInfo || S.outputs.map(p => ({ path: p, current: true }))).slice().sort((a, b) => (b.mtime || 0) - (a.mtime || 0));
+  const row = o => `<div class="outfile"><code title="${esc(o.path)}">${esc(o.path.replace(/^dist\//, ""))}</code>
+    <span class="muted-note">${o.bytes ? fmtSize(o.bytes) + " · " + fmtWhen(o.mtime) : ""}</span>
+    <button class="sm" data-open="${esc(o.path)}">Open</button><button class="sm" data-reveal="${esc(o.path)}">Show in Finder</button></div>`;
+  const cur = info.filter(o => o.current), old = info.filter(o => !o.current);
+  $("#outputs").innerHTML = (cur.length ? cur.map(row).join("") : `<p class="muted">Nothing built yet.</p>`) +
+    (old.length ? `<details style="margin-top:8px"><summary class="small muted">Older files with a previous name (${old.length}), kept in dist/</summary>${old.map(row).join("")}</details>` : "");
+  $$("#outputs [data-open]").forEach(b => b.onclick = () => api("/api/open", { path: b.dataset.open }));
+  $$("#outputs [data-reveal]").forEach(b => b.onclick = () => api("/api/open", { path: b.dataset.reveal, reveal: true }));
+  const opts = store.get("buildOpts", null);
+  if (opts && !renderBuild.done) {
+    $$(".fmt").forEach(x => x.checked = opts.formats.includes(x.value));
+    $(`[name="toc"][value="${opts.toc}"]`).checked = true; $("#bookmarks").checked = opts.bookmarks; $("#toclinks").checked = opts.links;
+  }
+  renderBuild.done = true;
+}
+async function doBuild() {
+  const formats = $$(".fmt:checked").map(x => x.value);
+  if (!formats.length) return toast("Pick at least one format", "bad");
+  const opts = { formats, toc: $("[name=toc]:checked").value, bookmarks: $("#bookmarks").checked, links: $("#toclinks").checked };
+  store.set("buildOpts", opts);
+  const t0 = Date.now();
+  const r = await busy("Building… this can take a minute", () => api("/api/build", { ...opts, audience: $("#audience").value || null }));
+  $("#buildlogbox").classList.remove("hidden"); $("#buildlogbox").open = !r.ok; $("#buildlog").textContent = r.output || "(no output)";
+  $("#buildres").innerHTML = r.ok ? `<span class="badge good">Built</span><span>${formats.map(f => f.toUpperCase()).join(", ")} in ${Math.round((Date.now() - t0) / 1000)} s</span>`
+    : `<span class="badge bad">Failed</span><span>The log below says why.</span>`;
+  toast(r.ok ? "Build finished" : "Build failed: see the log", r.ok ? "good" : "bad");
+  await load(true);
+  if (r.ok && formats.includes("pdf")) {
+    const aud = $("#audience").value.split(":")[1];
+    api("/api/open", { path: `dist/${(S?.outputs || []).find(o => o.endsWith(".pdf")) ? S.outputs.find(o => o.endsWith(".pdf")).replace(/^dist\//, "") : "book.pdf"}` }).catch(() => {});
+  }
+}
+// Save Work: structured git status (tools/gitstatus.py). Raw output stays under Technical details.
+let GIT = null, gitBusy = false, gitLast = "";
+const GIT_STATE = {
+  clean: ["pass", "Everything is saved and on GitHub", "No changes in the book's folders and no commits waiting to be pushed."],
+  changes: ["warn", "You have changes that aren't committed", "Commit them to save them on this computer, then push to GitHub."],
+  ahead: ["warn", "Saved on this computer, not yet on GitHub", "Push to upload the commits that are waiting."],
+  behind: ["warn", "GitHub has newer commits", "Another copy pushed changes. Pull them (git pull) before pushing from here."],
+  noupstream: ["unchecked", "Not connected to GitHub", "This branch has no GitHub branch to push to. Commits are still saved on this computer."],
+  other: ["pass", "The book is saved and on GitHub", "Some files outside the book's folders changed. Save Work doesn't include them; see Changes."],
+  conflict: ["fail", "There are merge conflicts", "Git needs you to choose between two versions of some files. Resolve them in a code editor or ask Claude Code, then refresh."],
+  norepo: ["na", "Not a git repository", "This book's folder isn't tracked by git."],
+};
+const KIND = { modified: "Modified", added: "Added", deleted: "Deleted", renamed: "Renamed", untracked: "New (untracked)", conflict: "Conflict" };
+function gitWhen(t) { return t ? new Date(t * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"; }
+async function renderGit() {
+  $("#gitpaths").textContent = "book, drafts, research, reviews, prompts…";
+  try { GIT = await api("/api/git"); } catch (e) {
+    $("#gitstate").innerHTML = `<div class="git-banner st-fail">Couldn't read the git status: ${esc(e.message)}</div>`; return;
+  }
+  const g = GIT;
+  const [st, title, text] = GIT_STATE[g.state] || GIT_STATE.norepo;
+  $("#gitstate").innerHTML = `<div class="git-banner st-${st}"><svg class="ic" aria-hidden="true"><use href="/icons.svg#${{ pass: "circle-check", warn: "circle-alert", fail: "circle-x" }[st] || "circle-minus"}"/></svg>
+    <div><b>${esc(title)}</b><div>${esc(text)}</div></div></div>`;
+  if (!g.repo) { ["#gitgrid", "#gitfiles", "#gitlog"].forEach(s => $(s).innerHTML = ""); setGitButtons(); return; }
+  $("#gitpaths").textContent = g.savePaths.join(", ");
+  const c = g.counts;
+  $("#gitgrid").innerHTML = `
+    <div class="metric"><span>Branch</span><b class="small-b mono">${esc(g.branch)}</b><small class="muted-note">${g.upstream ? `tracks ${esc(g.upstream)}` : "no GitHub branch"}</small></div>
+    <div class="metric"><span>This computer</span><b class="small-b">${g.saveCount ? `${g.saveCount} change${g.saveCount === 1 ? "" : "s"} to commit` : "Nothing to commit"}</b>
+      <small class="muted-note">${g.lastCommit ? `last commit ${esc(g.lastCommit.hash)} · ${gitWhen(g.lastCommit.time)}` : "no commits yet"}</small></div>
+    <div class="metric"><span>GitHub</span><b class="small-b">${!g.upstream ? "Not connected" : g.ahead ? `${g.ahead} commit${g.ahead === 1 ? "" : "s"} to push` : g.behind ? `${g.behind} newer on GitHub` : "In sync"}</b>
+      <small class="muted-note">${g.lastPush ? `GitHub has ${esc(g.lastPush.hash)} · ${gitWhen(g.lastPush.time)}` : ""}${g.lastFetch ? ` · checked ${gitWhen(g.lastFetch)}` : g.upstream ? " · not checked online yet" : ""}</small></div>
+    <div class="metric"><span>Files</span><b class="small-b">${c.modified} modified · ${c.added + c.renamed} added · ${c.deleted} deleted</b>
+      <small class="muted-note">${c.untracked} untracked${c.conflict ? ` · ${c.conflict} conflict(s)` : ""} · ${g.ignored} ignored (hidden)</small></div>`;
+  const save = g.files.filter(f => f.eligible), other = g.files.filter(f => !f.eligible);
+  const list = xs => `<ul class="gfiles">${xs.map(f => `<li><span class="gk gk-${f.kind}">${KIND[f.kind]}</span><span class="mono gpath" title="${esc(f.path)}">${esc(f.path)}</span></li>`).join("")}</ul>`;
+  $("#gitcount").textContent = g.files.length ? `${g.files.length} file${g.files.length === 1 ? "" : "s"}` : "";
+  $("#gitfiles").innerHTML = !g.files.length ? `<p class="muted-note">No changes. Ignored files (${g.ignored}) such as builds and private sources are never shown or committed.</p>` : `
+    ${save.length ? `<details ${save.length <= 15 ? "open" : ""}><summary><b>Included in the next commit</b> <span class="muted-note">${save.length}</span></summary>${list(save)}</details>` : `<p class="muted-note">Nothing in the book's folders has changed.</p>`}
+    ${other.length ? `<details><summary><b>Not included by Save Work</b> <span class="muted-note">${other.length} · outside the book's folders</span></summary>
+      <p class="muted-note">These are app, settings or tool files. Save Work leaves them alone; commit them yourself if you want them on GitHub. Untracked means git isn't tracking the file yet, not that anything failed.</p>${list(other)}</details>` : ""}`;
+  $("#gitlog").innerHTML = g.log.map(l => `<li><span class="mono">${esc(l.hash)}</span><span class="grow">${esc(l.subject)}</span><span class="muted-note nowrap">${gitWhen(l.time)}</span></li>`).join("") || `<li class="muted-note">No commits yet.</li>`;
+  $("#gitout").textContent = (gitLast ? gitLast + "\n\n── git status ──\n" : "") + (g.raw || "");
+  setGitButtons();
+}
+function setGitButtons() {
+  const g = GIT || {}, why = [];
+  const canCommit = g.repo && g.state !== "conflict" && g.saveCount > 0;
+  const canPush = g.repo && !!g.upstream && g.ahead > 0 && g.state !== "conflict";
+  if (!g.repo) why.push("This folder isn't a git repository.");
+  else if (g.state === "conflict") why.push("Commit and push are off until the merge conflicts are resolved.");
+  else {
+    if (!canCommit) why.push(g.otherCount ? "Commit is off: nothing in the book's folders changed (other files are never included)." : "Commit is off: there's nothing new to commit.");
+    if (!g.upstream) why.push("Push is off: this branch isn't connected to GitHub.");
+    else if (!canPush) why.push(g.behind ? "Push is off: GitHub has newer commits; pull them first." : "Push is off: GitHub already has every commit.");
+  }
+  $("#gitcommit").disabled = gitBusy || !canCommit;
+  $("#gitpush").disabled = gitBusy || !canCommit || !g.upstream;
+  $("#gitpushonly").disabled = gitBusy || !canPush;
+  $("#gitcommit").title = canCommit ? "Save the book's changes on this computer" : why[0] || "";
+  $("#gitpush").title = canCommit ? (g.upstream ? "Commit, then upload to GitHub" : "Not connected to GitHub") : why[0] || "";
+  $("#gitpushonly").title = canPush ? `Upload ${g.ahead} waiting commit(s) to GitHub` : why[why.length - 1] || "";
+  $("#gitwhy").textContent = why.join(" ");
+}
+function gitResult(r) {
+  const parts = [];
+  if (r.commit) parts.push(r.commit.ok
+    ? `<div class="git-banner st-pass"><b>Committed on this computer</b><div><span class="mono">${esc(r.commit.hash)}</span> ${esc(r.commit.subject)}</div></div>`
+    : `<div class="git-banner st-fail"><b>Commit didn't go through</b><div>${esc(r.commit.message)}</div></div>`);
+  if (r.push) parts.push(r.push.ok
+    ? `<div class="git-banner st-pass"><b>Pushed to GitHub</b><div>${esc(r.push.message)}</div></div>`
+    : `<div class="git-banner st-${r.push.kind === "network" ? "warn" : "fail"}"><b>${{ network: "Couldn't reach GitHub", auth: "GitHub sign-in problem", rejected: "GitHub refused the push", noremote: "No GitHub branch" }[r.push.kind] || "Push failed"}</b><div>${esc(r.push.message)}</div></div>`);
+  if (r.fetch) parts.push(r.fetch.ok ? `<div class="git-banner st-pass"><b>Checked GitHub</b></div>`
+    : `<div class="git-banner st-${r.fetch.kind === "network" ? "warn" : "fail"}"><b>Couldn't check GitHub</b><div>${esc(r.fetch.message)}</div></div>`);
+  $("#gitresult").innerHTML = parts.join("");
+  $("#gitresult").classList.toggle("hidden", !parts.length);
+}
+async function gitRun(label, path, body, wrap) {
+  if (gitBusy) return;                 // no double submissions
+  gitBusy = true; setGitButtons();
+  try {
+    const r = await busy(label, () => api(path, body));
+    const res = wrap(r);
+    gitLast = r.output || "";
+    gitResult(res);
+    const ok = (!res.commit || res.commit.ok) && (!res.push || res.push.ok) && (!res.fetch || res.fetch.ok);
+    toast(ok ? (res.push ? "Saved and pushed to GitHub." : res.commit ? `Committed ${res.commit.hash}.` : "Checked GitHub.")
+      : res.commit && !res.commit.ok ? "The commit didn't go through." : res.commit ? "Committed on this computer, but the push failed." : "That didn't work: see the message.", ok ? "good" : "bad", 6000);
+    if (res.commit?.ok) $("#gitmsg").value = "";
+  } catch (e) { gitResult({ commit: null, push: null, fetch: { ok: false, message: e.message } }); }
+  finally { gitBusy = false; await renderGit(); }
+}
+function doGit(push) { return gitRun(push ? "Committing and pushing…" : "Committing…", "/api/git/commit", { message: $("#gitmsg").value, push }, r => ({ commit: r.commit, push: r.push })); }
+$("#gitpushonly").onclick = () => gitRun("Pushing to GitHub…", "/api/git/push", {}, r => ({ push: r.push }));
+$("#gitfetch").onclick = () => gitRun("Checking GitHub…", "/api/git/fetch", {}, r => ({ fetch: r }));
+$("#gitrefresh").onclick = () => renderGit();
+
+// ---------------------------------------------------------------- wiring
+
+// ---------------------------------------------------------------- games
+let G = null;
+const GSTATUS = { review: "In review", approved: "Approved", rejected: "Rejected" };
+async function renderGames() {
+  G = await api("/api/games");
+  const sel = $("#gprompt-ch");
+  if (!sel.options.length) sel.innerHTML = G.chapters.map(c => `<option value="${c.n}" ${c.status !== "approved" ? "disabled" : ""}>Ch ${pad2(c.n)} · ${esc(c.title)}${c.status !== "approved" ? " (not approved)" : ""}</option>`).join("");
+  if (S && !sel.dataset.set) { sel.value = G.chapters.some(c => c.n === S.current) ? String(S.current) : String(G.chapters[0].n); sel.dataset.set = "1"; }
+  if (!G.games.length) { $("#glist").innerHTML = `<p class="muted small">No games installed yet. Import a ZIP above.</p>`; return; }
+  $("#glist").innerHTML = `<table class="batch gtable"><tr><th align="left">Game</th><th align="left">Chapter</th><th align="left">Status</th><th></th></tr>` +
+    G.games.map(g => `<tr>
+      <td><b>${esc(g.title)}</b><br><span class="small muted"><code>${esc(g.id)}</code> v${esc(g.version)} · ${esc(g.activityType)}</span>
+        ${g.warnings?.length ? `<details class="small"><summary>${g.warnings.length} warning(s)</summary><ul>${g.warnings.map(w => `<li>${esc(w)}</li>`).join("")}</ul></details>` : ""}</td>
+      <td class="small">Ch ${pad2(g.chapter)} · ${esc(g.chapterTitle)}${g.chapterStatus !== "approved" ? `<br><span class="muted">chapter not approved</span>` : ""}</td>
+      <td class="small"><span class="badge ${g.status === "approved" ? "good" : g.status === "rejected" ? "bad" : "warn"}">${GSTATUS[g.status] || g.status}</span><br><span class="muted">${g.willPublish ? "on the next publish" : "not published"}</span></td>
+      <td><div class="gacts">
+        <a class="button-link" href="/games/preview/${esc(g.id)}/" target="_blank"><button class="sm">Preview</button></a>
+        ${g.status === "approved" ? `<button class="sm" data-g="unapprove" data-id="${esc(g.id)}">Unapprove</button>` : `<button class="primary sm" data-g="approve" data-id="${esc(g.id)}">Approve…</button>`}
+        <details class="menu"><summary class="sm">More</summary><div class="pop">
+          <button data-g="update" data-id="${esc(g.id)}" title="Copy a prompt asking ChatGPT to update this game to Game API ${esc(G.apiVersion)} and the house image style">Copy update prompt</button>
+          <button data-g="updatezip" data-id="${esc(g.id)}" title="Copy the update prompt and download a ZIP with the current game and the full API docs">Update prompt + ZIP</button>
+          <button data-g="export" data-id="${esc(g.id)}" title="Download this game as a ZIP package">Export ZIP</button>
+          <button data-g="assign" data-id="${esc(g.id)}">Move to chapter…</button>
+          <hr><button class="danger" data-g="remove" data-id="${esc(g.id)}">Remove…</button></div></details>
+      </div></td></tr>`).join("") + `</table>`;
+  $$("#glist [data-g]").forEach(b => b.onclick = () => gameButton(b.dataset.g, b.dataset.id));
+}
+async function gameButton(action, id) {
+  const g = G.games.find(x => x.id === id);
+  if (action === "approve") {
+    const ok = await ask(`<h3>Approve “${esc(g.title)}”?</h3><p>Approve only after you've played it in Preview and it follows the editorial charter: no manipulation or pressure tactics, right/wrong scoring only for facts, nuanced feedback for people situations, no labels or diagnoses, and sensitive topics ungraded and skippable.</p>${g.warnings?.length ? `<p><b>${g.warnings.length} warning(s)</b> to check first.</p>` : ""}<p>It will go live the next time you publish the website.</p>`, [["Cancel", false], ["Approve", true, "primary"]]);
+    if (!ok) return;
+    return gameCall("status", { id, status: "approved" }, "Approved. It will be published with the next website publish.");
+  }
+  if (action === "unapprove") return gameCall("status", { id, status: "review" }, "Moved back to review. It will be removed from the site at the next publish.");
+  if (action === "remove") {
+    const ok = await ask(`<h3>Remove “${esc(g.title)}”?</h3><p>This deletes the installed package from <code>games/packages/${esc(id)}</code>. Export it first if you might want it back. If it's on the website, it disappears at the next publish.</p>`, [["Cancel", false], ["Remove", true, "danger"]]);
+    if (ok) return gameCall("remove", { id }, "Removed.");
+    return;
+  }
+  if (action === "assign") {
+    const opts = G.chapters.map(c => `<option value="${c.n}" ${c.n === g.chapter ? "selected" : ""}>Ch ${pad2(c.n)} · ${esc(c.title)}</option>`).join("");
+    const ok = await ask(`<h3>Move “${esc(g.title)}” to another chapter</h3><select id="gassign">${opts}</select><p class="small muted">The game goes back to review after moving.</p>`, [["Cancel", false], ["Move", true, "primary"]]);
+    if (ok) return gameCall("assign", { id, chapter: +$("#gassign").value }, "Moved; back in review.");
+    return;
+  }
+  if (action === "export") {
+    const r = await gameCall("export", { id });
+    if (r?.ok) { const a = document.createElement("a"); a.href = r.download; a.download = r.name; document.body.append(a); a.click(); a.remove();
+      toast(`Downloaded ${r.name}. A copy is also in ${r.path.replace(/[^/]+$/, "")}.`, "good", 6000); }
+    return r;
+  }
+  if (action === "update") return promptPack("game-update", null, false, id);
+  if (action === "updatezip") return promptPack("game-update", null, true, id);
+}
+async function gameCall(action, body, msg) {
+  const r = await busy("Working…", () => api("/api/games/" + action, body));
+  if (r.ok === false) { toast(r.message, "bad", 8000); return r; }
+  if (msg) toast(msg, "good");
+  renderGames();
+  return r;
+}
+function readZip() {
+  return new Promise(res => {
+    const f = $("#gfile"); f.value = "";
+    f.onchange = () => {
+      const file = f.files[0]; if (!file) return res(null);
+      const rd = new FileReader();
+      rd.onload = () => res({ name: file.name, data: String(rd.result).split(",")[1] });
+      rd.readAsDataURL(file);
+    };
+    f.click();
+  });
+}
+function showResult(r, title) {
+  const list = (xs, cls) => xs?.length ? `<ul class="${cls}">${xs.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
+  $("#gresult").innerHTML = `<div class="card ${r.ok ? "" : "issues"}" style="margin-top:10px"><b>${esc(title)}</b>${r.message ? `<pre class="raw">${esc(r.message)}</pre>` : ""}${list(r.errors, "")}${r.warnings?.length ? `<p class="small"><b>Warnings to check before approving:</b></p>` + list(r.warnings, "small") : ""}</div>`;
+}
+$("#gimport").onclick = async () => {
+  const z = await readZip(); if (!z) return;
+  const r = await busy("Validating and installing…", () => api("/api/games/import", { ...z, replace: $("#greplace").checked }));
+  if (r.ok) { showResult(r, `${r.replaced ? "Updated" : "Installed"} ${r.entry.id} v${r.entry.version} for chapter ${r.entry.chapter}. Status: review. Preview it, then approve.`); toast("Game imported for review", "good"); }
+  else showResult(r, `Not imported: ${z.name}`);
+  renderGames();
+};
+$("#gvalidate").onclick = async () => {
+  const z = await readZip(); if (!z) return;
+  const r = await busy("Validating…", () => api("/api/games/validate", z));
+  showResult(r, r.ok ? `${z.name} is valid (${r.id} v${r.version}, chapter ${r.chapter}). Not installed.` : `${z.name} has problems`);
+};
+$("#gprompt").onclick = () => promptPack("game", +$("#gprompt-ch").value, false);
+$("#gpromptzip").onclick = () => promptPack("game", +$("#gprompt-ch").value, true);
+$("#gdocs").onclick = () => {
+  const a = document.createElement("a");
+  a.href = "/api/games/docs.md"; a.download = `book-builder-game-api-${G?.apiVersion || "1.1"}.md`;
+  document.body.append(a); a.click(); a.remove();
+  toast(`Downloading ${a.download}. Attach it in ChatGPT with the prompt.`, "good", 5000);
+};
+let replyText = null;  // the pasted ChatGPT reply, kept while images are being chosen
+async function importReply(body, title) {
+  const r = await busy("Reading the reply, validating and installing…", () => api("/api/games/import-reply", { ...body, replace: $("#greplace").checked }));
+  if (r.entry) {
+    replyText = null;
+    showResult(r, `${r.replaced ? "Updated" : "Installed"} ${r.entry.id} v${r.entry.version} for chapter ${r.entry.chapter}. Status: review. Preview it, then approve.`);
+    toast("Game imported for review", "good"); renderGames(); return;
+  }
+  if (r.errors?.length || !(r.slots?.length || r.needAssets?.length)) { replyText = null; return showResult(r, title || "Not imported from the pasted reply"); }
+  replyText = r.text;
+  showAssetPicker(r);
+}
+const PANEL = ["top-left", "top-right", "bottom-left", "bottom-right"];
+function showAssetPicker(r) {
+  const slots = r.slots?.length ? r.slots : r.needAssets.map(a => ({ slot: a.path, kind: "single", label: a.path, assets: [a] }));
+  const describe = s => s.kind === "sheet"
+    ? `<ol class="small muted" style="margin:4px 0 0;padding-left:18px">${s.assets.map(a => `<li>${PANEL[a.panel - 1]}: <code>${esc(a.path)}</code>${a.alt ? ` · ${esc(a.alt)}` : ""}</li>`).join("")}</ol>`
+    : s.kind === "icon" ? `<div class="small muted">Square icon · <code>${esc(s.assets[0].path)}</code></div>`
+    : `<div class="small muted">${esc(s.assets[0].alt || "")}</div>`;
+  const rows = slots.map((s, i) => `<tr>
+      <td><b>${esc(s.label)}</b>${describe(s)}</td>
+      <td><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-asset="${esc(s.slot)}" data-kind="${s.kind}" id="ga-${i}">
+        <div class="sheetprev" id="gp-${i}"></div></td></tr>`).join("");
+  const sheets = slots.filter(s => s.kind === "sheet").length;
+  $("#gresult").innerHTML = `<div class="card" style="margin-top:10px">
+    <b>${esc(r.title || r.id || "This game")} needs ${slots.length} image file${slots.length === 1 ? "" : "s"}.</b>
+    <p class="small">Download ${sheets ? "Sheet 1, Sheet 2 and the Icon" : "each image"} from the ChatGPT chat (each is labeled above the picture), then choose them here.
+    ${sheets ? "Each sheet is cut into its four images (the preview shows the cut lines). " : ""}Images are resized and converted automatically.</p>
+    <table class="batch">${rows}</table>
+    ${r.warnings?.length ? `<p class="small"><b>Warnings to check before approving:</b></p><ul class="small">${r.warnings.map(w => `<li>${esc(w)}</li>`).join("")}</ul>` : ""}
+    <div class="row" style="margin-top:10px"><button class="primary" id="gawith">Import with these images</button><button id="gacancel">Cancel</button></div></div>`;
+  $$("#gresult [data-asset]").forEach((inp, i) => inp.onchange = () => {
+    const f = inp.files[0], box = $("#gp-" + i); if (!f) { box.innerHTML = ""; return; }
+    const url = URL.createObjectURL(f);
+    box.innerHTML = `<div class="${inp.dataset.kind === "sheet" ? "grid2" : inp.dataset.kind === "icon" ? "sq" : ""}"><img src="${url}" alt=""></div>`;
+    const img = box.querySelector("img");
+    img.onload = () => { if (inp.dataset.kind === "sheet" && img.naturalWidth < 960) box.insertAdjacentHTML("beforeend", `<div class="small" style="color:var(--bad)">Only ${img.naturalWidth} px wide: too small to cut. Ask ChatGPT for the sheet at its highest resolution.</div>`); };
+  });
+  $("#gacancel").onclick = () => { replyText = null; $("#gresult").innerHTML = ""; };
+  $("#gawith").onclick = async () => {
+    const inputs = $$("#gresult [data-asset]");
+    const missing = inputs.filter(i => !i.files[0]);
+    if (missing.length) return toast(`Choose a file for ${missing.map(i => slots.find(s => s.slot === i.dataset.asset).label).join(", ")}`, "bad", 6000);
+    const assets = {};
+    for (const i of inputs) assets[i.dataset.asset] = await new Promise(res => {
+      const rd = new FileReader(); rd.onload = () => res(String(rd.result).split(",")[1]); rd.readAsDataURL(i.files[0]);
+    });
+    await importReply({ text: replyText, assets }, "Not imported");
+  };
+}
+$("#gpaste").onclick = () => importReply({ clipboard: true });
+$("#gpastecheck").onclick = async () => {
+  const r = await busy("Checking the reply…", () => api("/api/games/validate-reply", { clipboard: true }));
+  const imgs = r.needAssets?.length ? ` It declares ${r.needAssets.length} image(s), which you'll be asked to choose when you import.` : "";
+  showResult(r, (!r.errors?.length && r.id) ? `The reply is valid (${r.id} v${r.version}, chapter ${r.chapter}). Not installed.${imgs}` : "The pasted reply has problems");
+};
+
+// ---------------------------------------------------------------- website
+async function renderWebsite() {
+  const st = await api("/api/website/status").catch(e => ({ error: e.message }));
+  const run = st.run || {};
+  const dep = !run.status ? `<span class="badge">No deployment yet</span>` : run.status !== "completed" ? `<span class="badge info">Deploying…</span>`
+    : run.conclusion === "success" ? `<span class="badge good">Live</span>` : `<span class="badge bad">Last deploy ${esc(run.conclusion)}</span>`;
+  $("#wconfig").innerHTML = st.configured
+    ? `<div class="row"><a href="${esc(st.url)}" target="_blank" style="font-size:16px;font-weight:600">${esc(st.url)}</a>${dep}</div>
+       <p class="muted-note" style="margin:6px 0 0">Public repo <code>${esc(st.repo)}</code> (only the generated site) · last deployment ${esc((run.createdAt || "").replace("T", " ").slice(0, 16)) || "—"}${run.url ? ` · <a href="${esc(run.url)}" target="_blank">details</a>` : ""}</p>`
+    : st.error ? `<p class="alert bad">${esc(st.error)}</p>` : `<p class="alert info">No publishing repository yet. Use <b>More › Set up publishing repo</b>: it creates a public repo that holds only the generated site.</p>`;
+}
+function wlog(text) { $("#wlogbox").classList.remove("hidden"); $("#wlog").textContent = text; }
+async function showPlan() {
+  const p = await busy("Checking…", () => api("/api/website/plan"));
+  $("#wplanbox").classList.remove("hidden");
+  $("#wplanbox").innerHTML = `<h3>Will be published</h3>
+    <p>${p.chapters.length} chapters · ${p.games.length} games · ${p.comingSoon.length} sections shown as Coming soon</p>
+    ${p.warnings.length ? `<div class="issues"><b>Warnings</b><ul>${p.warnings.map(w => `<li>${esc(w)}</li>`).join("")}</ul></div>` : `<p class="small muted">No warnings.</p>`}
+    ${p.games.length ? `<p><b>Games:</b> ${p.games.map(g => `${esc(g.title)} (ch ${g.chapter}, v${esc(g.version)})`).join(", ")}</p>` : ""}
+    <details><summary>Chapters</summary><p class="small">${p.chapters.map(c => esc((c.n ? c.n + ". " : "") + c.title)).join(" · ")}</p></details>
+    ${p.comingSoon.length ? `<details><summary>Coming soon</summary><p class="small">${p.comingSoon.map(c => esc(c.title)).join(" · ")}</p></details>` : ""}`;
+  return p;
+}
+$("#wplan").onclick = showPlan;
+$("#wstatus").onclick = renderWebsite;
+$("#wsetup").onclick = async () => {
+  $$(".menu[open]").forEach(m => m.open = false);
+  const ok = await ask(`<h3>Set up the publishing repository?</h3><p>Creates (if needed) a <b>public</b> GitHub repository for this book under your account, holding only the generated website, and turns on GitHub Pages. Your book repository stays private.</p>`, [["Cancel", false], ["Set up", true, "primary"]]);
+  if (!ok) return;
+  const r = await busy("Setting up…", () => api("/api/website/setup", {}));
+  wlog(r.output); toast(r.ok ? "Publishing repository ready" : "Setup failed", r.ok ? "good" : "bad"); renderWebsite();
+};
+$("#wpreview").onclick = async () => {
+  const r = await busy("Building the preview (about a minute)…", () => api("/api/website/preview", {}));
+  wlog(r.output);
+  if (r.ok) { toast("Preview ready", "good"); window.open(r.url, "_blank"); } else toast("Preview build failed: see the log", "bad", 6000);
+};
+$("#wpublish").onclick = async () => {
+  const p = await showPlan();
+  const ok = await ask(`<h3>Publish the website?</h3><p>This builds the site and the downloadable PDF, EPUB and Word files from <b>${p.chapters.length} approved chapters</b> and <b>${p.games.length} approved games</b>, checks it, then commits and pushes it to <code>${esc(p.repo || "a new public repository")}</code>. GitHub Pages then deploys it publicly.</p>${p.warnings.length ? `<p><b>${p.warnings.length} warning(s)</b> are listed on the page.</p>` : ""}<p>It takes a few minutes.</p>`, [["Cancel", false], ["Publish", true, "primary"]]);
+  if (!ok) return;
+  const r = await busy("Publishing… building, checking, pushing and waiting for GitHub to deploy (several minutes)", () => api("/api/website/publish", { confirm: true }));
+  wlog(r.output);
+  toast(r.ok ? "Published" : "Publish failed: see the log", r.ok ? "good" : "bad", 8000);
+  renderWebsite();
+};
+
+$$("[data-view]").forEach(b => b.onclick = () => setView(b.dataset.view));
+$("#list").onclick = e => {
+  const ph = e.target.closest(".part-h");
+  if (ph) { const s = new Set(store.get("closedParts", [])); s.has(ph.dataset.part) ? s.delete(ph.dataset.part) : s.add(ph.dataset.part); store.set("closedParts", [...s]); return renderList(); }
+  const it = e.target.closest(".ch-item"); if (it) { document.body.classList.remove("drawer"); go(+it.dataset.n); }
+};
+$("#list").onkeydown = e => { const it = e.target.closest(".ch-item"); if (it && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); go(+it.dataset.n); } };
+const narrow = () => matchMedia("(max-width: 1150px)").matches;
+function toggleSide() {
+  if (narrow()) return document.body.classList.toggle("drawer");
+  document.body.classList.toggle("side-off"); store.set("sideOff", document.body.classList.contains("side-off"));
+}
+if (store.get("sideOff", false)) document.body.classList.add("side-off");
+$("#drawer-btn").onclick = toggleSide;
+document.addEventListener("click", e => { if (!e.target.closest(".menu")) $$(".menu[open]").forEach(m => m.open = false); });
+$("#scrim").onclick = () => document.body.classList.remove("drawer");
+$("#search").oninput = renderList;
+$("#filter").onchange = renderList;
+$("#refresh").onclick = () => { $("#more").open = false; load(true).then(() => toast("Refreshed")); };
+$("#theme").onclick = () => {
+  const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  const t = cur === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = t; store.set("theme", t);
+};
+$("#quit").onclick = async () => {
+  if (!await ask("<h3 style='margin-top:0'>Stop the book manager?</h3><p>You can start it again from <code>run/Book Manager.command</code>.</p>", [["Cancel", false], ["Stop", true, "primary"]])) return;
+  await api("/api/quit", {}); document.body.innerHTML = "<p style='padding:40px;font-size:18px'>The book manager has stopped. You can close this tab.</p>";
+};
+$$("#bmode button").forEach(b => b.onclick = () => { store.set("bmode", b.dataset.m); renderBatch(); });
+let bErr = "";
+const setRange = () => { bErr = batchInputError(); if (!bErr) { store.set("bfrom", +$("#bfrom").value); store.set("bto", +$("#bto").value); } renderBatch(); };
+$("#bfrom").onchange = setRange;
+$("#bto").onchange = setRange;
+$("#bnext10").onclick = () => { const [, to] = batchRange(); const f = Math.min(to + 1, lastNum()); store.set("bfrom", f); store.set("bto", Math.min(f + 9, lastNum()));
+  Object.keys(BMODES).forEach(m => store.set("bptr-" + m, f)); store.set("bmode", "rcopy"); renderBatch(); };
+$("#bgo").onclick = batchGo;
+$("#buildgo").onclick = doBuild;
+$("#gitcommit").onclick = () => doGit(false);
+$("#gitpush").onclick = () => doGit(true);
+$("#help-ws").onclick = () => setView("workspace");
+$("#help-search").oninput = e => {
+  const q = e.target.value.toLowerCase().trim();
+  $$("#help-secs .hsec").forEach(d => { const hit = !q || d.textContent.toLowerCase().includes(q); d.classList.toggle("hidden", !hit); if (q && hit) d.open = true; });
+};
+$("#help-tour").onclick = () => tourStart(0, true);
+$("#help-resume").onclick = () => tourStart(tourSaved());
+$("#tour-menu").onclick = () => { $("#more").open = false; tourSaved() ? tourStart(tourSaved()) : tourStart(0, true); };
+$$("[data-tour-at]").forEach(b => b.onclick = () => tourStart(+b.dataset.tourAt - 1));
+$("#bzip").checked = store.get("bzip", false);
+$("#membar").onclick = () => setView("workspace");
+
+
+document.addEventListener("keydown", e => {
+  if (e.metaKey || e.ctrlKey || e.altKey || $("#dlg").open) return;
+  if (TOUR.on && e.key === "Escape") { e.preventDefault(); return tourEnd(); }
+  if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) { if (e.key === "Escape") document.activeElement.blur(); return; }
+  if (e.key === "Escape") { document.body.classList.remove("drawer"); return; }
+  if (e.key === "Escape" && TOUR.on) return tourEnd();
+  if (e.key === "c") { toggleSide(); return; }
+  const k = e.key;
+  if (k === "j" || k === "ArrowDown") { e.preventDefault(); go(neighbor(byN(S.current), 1)); }
+  else if (k === "k" || k === "ArrowUp") { e.preventDefault(); go(neighbor(byN(S.current), -1)); }
+  else if (k === "n") { if (view === "batch") batchGo(); else { setView("chapter"); nextStep(); } }
+  else if (k === "v") { setView("chapter"); tab = "save"; store.set("tab", "save"); renderChapter(); previewReply(true); }
+  else if (k === "r") load(true);
+  else if (k === "/") { e.preventDefault(); $("#search").focus(); }
+  else if (k === "?") setView("help");
+  else if ("12345678".includes(k) && openedHere()) bbGo(PROJECT_NAV[+k - 1].id, null, "p");
+});
+window.addEventListener("focus", () => { if (S) load(true).catch(() => {}); });
+
+const th = store.get("theme", null); if (th) document.documentElement.dataset.theme = th;
+</script>
+<script src="/builder.js"></script>
+<script>
+load().then(bbBoot).catch(e => { document.querySelector("main .wrap").innerHTML = `<div class="card issues">Couldn't reach Book Builder: ${esc(e.message)}. Start it with run/Book Manager.command.</div>`; });
+</script>
+</body>
+</html>

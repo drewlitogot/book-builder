@@ -1,0 +1,24 @@
+---
+// Checkboxes that show or hide a chapter's boxes. Rendered in the desktop sidebar and inside the
+// mobile "In this chapter" panel; the page script keeps every copy in sync (matched by data-callout,
+// no element ids, so the two copies never clash).
+import { CALLOUT_LABELS } from "../lib/data";
+interface Props { callouts: string[] }
+const { callouts } = Astro.props;
+const kinds = ["perspective", "neurotype", "partner"] as const;
+const kindLabels = { perspective: "Perspective boxes", neurotype: "Neurotype boxes", partner: "Partner boxes" };
+---
+<div class="filter-box">
+  <fieldset>
+    <legend>Show boxes for</legend>
+    {kinds.filter((k) => callouts.some((c) => c.startsWith(k))).map((k) => (
+      <>
+        <p class="small muted" style="margin:0.4rem 0 0.1rem">{kindLabels[k]}</p>
+        {callouts.filter((c) => c.startsWith(k)).map((c) => (
+          <label><input type="checkbox" checked data-callout={c} /> {CALLOUT_LABELS[c] ?? c.split(":")[1]}</label>
+        ))}
+      </>
+    ))}
+  </fieldset>
+  <p class="small muted">Hidden boxes come back when you tick them again.</p>
+</div>

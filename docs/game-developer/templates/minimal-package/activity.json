@@ -1,0 +1,36 @@
+{
+  "apiVersion": "1.1",
+  "start": "intro",
+  "screens": [
+    {
+      "id": "intro",
+      "type": "info",
+      "title": "REPLACE: opening title",
+      "body": "REPLACE: one short paragraph that sets up the activity.",
+      "next": "question"
+    },
+    {
+      "id": "question",
+      "type": "form",
+      "title": "REPLACE: question screen title",
+      "fields": [
+        {
+          "id": "choice",
+          "type": "single-choice",
+          "label": "REPLACE: the question",
+          "options": [
+            { "value": "a", "label": "REPLACE: option A", "feedback": "REPLACE: nuanced feedback for A.", "tone": "neutral" },
+            { "value": "b", "label": "REPLACE: option B", "feedback": "REPLACE: nuanced feedback for B.", "tone": "consider" }
+          ]
+        }
+      ],
+      "next": "done"
+    },
+    {
+      "id": "done",
+      "type": "completion",
+      "title": "REPLACE: closing title",
+      "body": "REPLACE: one or two sentences that connect back to the chapter."
+    }
+  ]
+}

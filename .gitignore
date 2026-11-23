@@ -1,0 +1,27 @@
+.DS_Store
+dist/
+__pycache__/
+.venv/
+sources-private/
+sources-inbox/*
+!sources-inbox/README.md
+.publish/
+games/.staging/
+
+# Claude Code. .claude/launch.json (dev-server start commands) is shared project configuration and
+# can be committed. Personal settings, local overrides, caches and session data stay out of git.
+.claude/settings.local.json
+.claude/**/*.local.*
+.claude/cache/
+.claude/todos/
+.claude/shell-snapshots/
+.claude/statsig/
+
+# Secrets never belong in the repository.
+.env
+.env.*
+*.pem
+*.key
+# Research Library: uploaded documents may be copyrighted (like sources-private), so it stays out of git.
+# Book-data backups (manager option 8) include it, minus the rebuildable search index.
+research-library/

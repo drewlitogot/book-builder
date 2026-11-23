@@ -1,0 +1,10 @@
+---
+// The book's logo: black on light backgrounds, white on dark (follows the reader's theme).
+import { u } from "../lib/data";
+interface Props { class?: string; alt?: string }
+const { class: cls = "", alt = book.title } = Astro.props;
+---
+<span class={`logo ${cls}`}>
+  <img class="logo-light" src={u("brand/logo-black-800.png")} alt={alt} width="800" height="138" />
+  <img class="logo-dark" src={u("brand/logo-white-800.png")} alt="" aria-hidden="true" width="800" height="140" />
+</span>
