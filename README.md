@@ -67,3 +67,9 @@ cd site && npm ci && npx vitest run
 
 - Icons: see `tools/web/ICONS-LICENSE.txt`.
 - Citation style: `assets/csl/apa.csl` (Citation Style Language project, CC BY-SA 3.0).
+
+## License
+
+Book Builder is released under the [MIT License](LICENSE). Bundled third-party files keep their own
+licenses: the fonts in `assets/fonts` (SIL Open Font License), the icons (ISC) and the citation style
+(CC BY-SA 3.0). Books you make with Book Builder are yours to license however you like.

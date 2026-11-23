@@ -106,7 +106,7 @@
       "id": "docs",
       "name": "Documentation and tests support",
       "purpose": "User and developer documentation, shared test fixtures.",
-      "files": ["README.md", "START_HERE.md", "CHANGELOG.md", "docs/[A-Z]*.md", "docs/book-manager/*", "docs/architecture/*", "tests/fixtures/*"],
+      "files": ["README.md", "LICENSE", "START_HERE.md", "CHANGELOG.md", "docs/[A-Z]*.md", "docs/book-manager/*", "docs/architecture/*", "tests/fixtures/*"],
       "interfaces": [],
       "depends": [],
       "tests": [],
